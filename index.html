@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>البغدادي — تطبيق المندوب</title>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&display=swap');
+  :root{
+    --brand:#7c3aed;          /* بنفسجي */
+    --brand-50:#f5f3ff;
+    --brand-600:#5b21b6;
+    --dark:#0f172a;
+    --muted:#64748b;
+    --green:#16a34a;
+    --yellow:#f59e0b;
+    --red:#dc2626;
+    --blue:#3b82f6;
+    --violet:#8b5cf6;
+    --card:#ffffff;
+    --border:#e5e7eb;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;height:100%;overflow-x:hidden;
+    font-family:'Cairo',sans-serif;
+    background:var(--brand-50);
+    color:#111827;
+    -webkit-user-select:none;
+    -moz-user-select:none;
+    -ms-user-select:none;
+    user-select:none;
+  }
+  input,textarea,select{
+    -webkit-user-select:text;
+    -moz-user-select:text;
+    -ms-user-select:text;
+    user-select:text;
+  }
+
+  /* شاشة الدخول */
+  #loginScreen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:radial-gradient(circle at top left,#a855f7,#7c3aed,#4c1d95);
+  }
+  .login-card{
+    width:100%;
+    max-width:420px;
+    background:#0b1020;
+    border-radius:20px;
+    padding:24px 20px 20px;
+    box-shadow:0 20px 50px rgba(15,23,42,.6);
+    color:#e5e7eb;
+    position:relative;
+    overflow:hidden;
+  }
+  .login-card::before{
+    content:"";
+    position:absolute;
+    inset:-40%;
+    background:radial-gradient(circle at top,#c4b5fd33,#0000);
+    pointer-events:none;
+  }
+  .logo-text{
+    position:relative;
+    margin-bottom:18px;
+    text-align:center;
+  }
+  .logo-main{
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:2px;
+    color:#f9fafb;
+    text-shadow:0 0 10px rgba(129,140,248,.9),
+                0 0 20px rgba(79,70,229,.8);
+  }
+  .logo-sub{
+    font-size:14px;
+    font-weight:700;
+    margin-top:4px;
+    color:#c4b5fd;
+  }
+  .logo-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:999px;
+    padding:4px 10px;
+    font-size:11px;
+    color:#a5b4fc;
+    border:1px solid rgba(129,140,248,.6);
+    background:linear-gradient(90deg,rgba(55,65,81,.8),rgba(15,23,42,.9));
+    margin-top:8px;
+  }
+  .login-card h2{
+    margin:8px 0 14px;
+    font-size:18px;
+    text-align:center;
+  }
+  .inp{
+    width:100%;
+    padding:11px 12px;
+    border-radius:10px;
+    margin:6px 0;
+    border:1px solid #1f2937;
+    background:#020617;
+    color:#f9fafb;
+    font-size:14px;
+  }
+  .inp::placeholder{color:#4b5563;}
+  .inp:focus{
+    outline:none;
+    border-color:#818cf8;
+    box-shadow:0 0 0 2px #6366f180;
+  }
+  .btn{
+    width:100%;
+    padding:11px;
+    margin-top:10px;
+    border-radius:999px;
+    border:0;
+    background:linear-gradient(135deg,#7c3aed,#4f46e5);
+    color:#f9fafb;
+    font-weight:800;
+    font-size:15px;
+    cursor:pointer;
+    box-shadow:0 14px 30px rgba(88,28,135,.7);
+  }
+  .btn:active{transform:scale(.98);}
+  .small{
+    font-size:11px;
+    color:#9ca3af;
+    margin-top:10px;
+    text-align:center;
+  }
+  .msg{margin-top:6px;font-size:13px;text-align:center;}
+  .ok{color:#22c55e;}
+  .err{color:#f97316;}
+
+  /* التطبيق */
+  #app{display:none;min-height:100vh;}
+
+  header{
+    position:sticky;top:0;z-index:6;
+    background:#020617;
+    color:#e5e7eb;
+    border-bottom:1px solid #111827;
+    padding:10px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand-pill{
+    border-radius:999px;
+    padding:8px 14px;
+    border:1px solid #4c1d95;
+    background:radial-gradient(circle at top,#7c3aed,#4c1d95);
+    color:#ede9fe;
+    font-weight:800;
+    font-size:13px;
+    box-shadow:0 0 18px rgba(129,140,248,.7);
+  }
+  .welcome{
+    font-size:12px;
+    color:#a5b4fc;
+  }
+  .menu-btn{
+    background:#020617;
+    border:1px solid #1e293b;
+    border-radius:10px;
+    padding:8px 10px;
+    cursor:pointer;
+    color:#e5e7eb;
+  }
+
+  /* القائمة الجانبية */
+  .sidebar{
+    position:fixed;
+    inset:0 0 0 auto;
+    width:0;
+    max-width:280px;
+    background:#020617;
+    color:#e5e7eb;
+    transition:width .25s;
+    overflow:hidden;
+    z-index:20;
+    box-shadow:-4px 0 20px rgba(15,23,42,.8);
+  }
+  .sidebar.open{width:82%;}
+  .sidebar-header{
+    padding:18px 16px;
+    border-bottom:1px solid #111827;
+  }
+  .sidebar-title{
+    font-weight:700;
+    margin-bottom:4px;
+  }
+  .sidebar-user{
+    font-size:13px;
+    color:#9ca3af;
+  }
+  .nav a{
+    display:block;
+    color:#e5e7eb;
+    text-decoration:none;
+    padding:11px 18px;
+    font-size:14px;
+    border-bottom:1px solid #020617;
+  }
+  .nav a:hover{
+    background:#111827;
+  }
+  .overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.6);
+    z-index:15;
+  }
+  .overlay.show{display:block;}
+
+  /* المحتوى */
+  .content{
+    padding:12px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:10px;
+  }
+  .card-dark{
+    background:#020617;
+    border-color:#111827;
+    color:#e5e7eb;
+  }
+  .section-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:6px;
+    margin-bottom:8px;
+  }
+  .section-header h3{margin:0;font-size:16px;}
+  .back-btn{
+    border-radius:999px;
+    border:1px solid #e5e7eb;
+    background:#0f172a;
+    color:#e5e7eb;
+    padding:6px 12px;
+    font-size:12px;
+    cursor:pointer;
+  }
+
+  .stat-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+  }
+  .stat-box{
+    border-radius:12px;
+    padding:10px;
+    text-align:center;
+    font-weight:700;
+    font-size:13px;
+    color:#f9fafb;
+  }
+  .stat-box span{
+    display:block;
+    margin-top:4px;
+    font-size:18px;
+  }
+  .stat-total{background:linear-gradient(135deg,#7c3aed,#4f46e5);}
+  .stat-fees{background:linear-gradient(135deg,#6366f1,#0ea5e9);}
+  .stat-net{background:linear-gradient(135deg,#22c55e,#16a34a);}
+
+  .muted{color:var(--muted);font-size:12px;margin-top:6px;}
+  .thanks{
+    margin-top:10px;
+    font-size:13px;
+    color:#4b5563;
+  }
+
+  /* Tabs للطلبات */
+  .tabs{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding-bottom:6px;
+  }
+  .tab{
+    white-space:nowrap;
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:6px 10px;
+    cursor:pointer;
+    background:#f9fafb;
+    font-size:13px;
+  }
+  .tab.active{
+    background:#7c3aed;
+    border-color:#5b21b6;
+    color:#f9fafb;
+  }
+  .pill-count{
+    background:rgba(15,23,42,.12);
+    border-radius:999px;
+    padding:2px 8px;
+    margin-inline-start:4px;
+    font-size:11px;
+  }
+
+  .orders{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+    margin-top:10px;
+  }
+  .order-card{
+    border-radius:12px;
+    padding:11px 10px;
+    color:#f9fafb;
+    box-shadow:0 2px 8px rgba(15,23,42,.4);
+    font-size:13px;
+  }
+  .order-card p{margin:4px 0;}
+  .pending{background:linear-gradient(135deg,#2563eb,#1d4ed8);}
+  .delivered{background:linear-gradient(135deg,#16a34a,#22c55e);}
+  .delayed{background:linear-gradient(135deg,#f59e0b,#eab308);}
+  .rejected{background:linear-gradient(135deg,#b91c1c,#dc2626);}
+
+  .wasl-copy{
+    text-decoration:underline;
+    cursor:pointer;
+  }
+  .cust-phone{
+    text-decoration:underline;
+    cursor:pointer;
+  }
+
+  .badge-status{
+    display:inline-block;
+    border-radius:999px;
+    padding:2px 8px;
+    font-size:11px;
+    background:rgba(15,23,42,.25);
+  }
+
+  .actions{
+    margin-top:6px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .btnx{
+    border-radius:999px;
+    border:0;
+    padding:6px 9px;
+    font-size:12px;
+    cursor:pointer;
+    font-weight:600;
+  }
+  .btnx-green{background:#22c55e;color:#052e16;}
+  .btnx-yellow{background:#facc15;color:#422006;}
+  .btnx-red{background:#ef4444;color:#fef2f2;}
+
+  /* بحث */
+  .search-bar{
+    display:flex;
+    gap:8px;
+  }
+  .search-bar input{flex:1;}
+
+  /* الأرشيف */
+  .arch-card{
+    background:#e5e7eb;
+    color:#111827;
+    border:1px solid #cbd5f5;
+  }
+
+  /* الدعم */
+  .support-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:6px;
+    margin:6px 0;
+    padding:8px 10px;
+    border-radius:10px;
+    background:#f1f5f9;
+    font-size:14px;
+  }
+  .support-btns{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .support-btn{
+    border-radius:999px;
+    border:0;
+    padding:4px 9px;
+    font-size:12px;
+    cursor:pointer;
+    font-weight:600;
+  }
+
+  /* الإشعارات */
+  audio{display:none;}
+
+  @media (min-width:768px){
+    .sidebar.open{width:280px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- شاشة الدخول -->
+<section id="loginScreen">
+  <div class="login-card">
+    <div class="logo-text">
+      <div class="logo-main">البغدادي للتوصيل السريع</div>
+      <div class="logo-sub">تطبيق الكابتن (المندوب)</div>
+      <div class="logo-pill">نظام إداري وربط مباشر مع لوحة المدير</div>
+    </div>
+    <h2>تسجيل دخول الكابتن</h2>
+    <input id="loginUser" class="inp" placeholder="اسم المستخدم (يوزر الكابتن)">
+    <input id="loginPass" class="inp" type="password" placeholder="كلمة المرور">
+    <button id="doLogin" class="btn">دخول</button>
+    <div id="loginMsg" class="msg"></div>
+    <div class="small">© 2025 البغدادي للتوصيل السريع — جميع الحقوق محفوظة</div>
+  </div>
+</section>
+
+<!-- التطبيق -->
+<section id="app">
+  <header>
+    <button id="openMenu" class="menu-btn">☰</button>
+    <div class="brand">
+      <div class="brand-pill">البغدادي — الكابتن</div>
+      <div class="welcome" id="welcomeText"></div>
+    </div>
+  </header>
+
+  <!-- القائمة الجانبية -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">القائمة الرئيسية</div>
+      <div class="sidebar-user" id="sidebarUser"></div>
+    </div>
+    <nav class="nav">
+      <a href="#" data-page="home">🏠 الحسابات (الرئيسية)</a>
+      <a href="#" data-page="orders">📦 الطلبات</a>
+      <a href="#" data-page="search">🔎 البحث</a>
+      <a href="#" data-page="archive">📁 الأرشيف</a>
+      <a href="#" data-page="support">🛟 الدعم</a>
+      <a href="#" data-page="notifications">🔔 الإشعارات</a>
+      <a href="#" data-page="about">ℹ️ حول التطبيق</a>
+      <a href="#" id="logoutBtn">🚪 تسجيل الخروج</a>
+    </nav>
+  </aside>
+  <div id="overlay" class="overlay"></div>
+
+  <main class="content" id="content"></main>
+</section>
+
+<!-- تنبيه صوتي للإشعارات -->
+<audio id="beep" preload="auto" src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQAAACAA"></audio>
+
+<!-- Firebase + منطق التطبيق -->
+<script type="module">
+/* ========== Firebase ========== */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import {
+  getFirestore, collection, query, where, getDocs, getDoc,
+  addDoc, updateDoc, doc, onSnapshot, serverTimestamp, orderBy
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDmTFz_jU3HF8Jgb5wbpx_xtGvjBTPksOY",
+  authDomain: "bagdadi-delivery.firebaseapp.com",
+  projectId: "bagdadi-delivery",
+  storageBucket: "bagdadi-delivery.appspot.com",
+  messagingSenderId: "957413017368",
+  appId: "1:957413017368:web:a9c7373f0cf3e95cbc806d"
+};
+const appFB = initializeApp(firebaseConfig);
+const db = getFirestore(appFB);
+
+/* ========== Helpers ========== */
+const $ = s => document.querySelector(s);
+const content = $('#content');
+const overlay = $('#overlay');
+const sidebar = $('#sidebar');
+const beep = $('#beep');
+
+const fmtN = n => Number(n||0).toLocaleString('en-US');
+
+function apm(d){
+  if(!d || !(d instanceof Date)) return '-';
+  let h=d.getHours(), m=(''+d.getMinutes()).padStart(2,'0');
+  const ap = h>=12?'م':'ص';
+  h = h%12 || 12;
+  return `${h}:${m} ${ap}`;
+}
+function fmtDate(d){
+  if(!d || !(d instanceof Date)) return '-';
+  return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${apm(d)}`;
+}
+function showMsg(id,msg,type){
+  const el = $('#'+id);
+  if(!el) return;
+  el.className = 'msg '+type;
+  el.textContent = msg;
+}
+function statusText(s){
+  return s==='pending'  ? 'قيد التنفيذ' :
+         s==='delivered'? 'واصل' :
+         s==='delayed'  ? 'مؤجل' :
+         (s==='rejected' || s==='temp') ? 'رفض' :
+         s || '-';
+}
+
+/* نسخ نص بشكل مضمون */
+async function copyText(txt){
+  txt = String(txt||'').trim();
+  if(!txt) return;
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(txt);
+      return true;
+    }
+  }catch(e){}
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.style.position='fixed';
+    ta.style.opacity='0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
+
+/* ========== جلسة الكابتن ========== */
+function getSession(){
+  try{return JSON.parse(localStorage.getItem('mandoubSession')||'null');}catch{return null;}
+}
+function saveSession(o){
+  try{localStorage.setItem('mandoubSession',JSON.stringify(o));}catch{}
+}
+function clearSession(){
+  localStorage.removeItem('mandoubSession');
+}
+
+let currentPage = 'home';
+let unsubOrders = null;
+let currentOrdersTab = 'pending';
+
+/* ========== القائمة الجانبية ========== */
+$('#openMenu').onclick = ()=>{
+  sidebar.classList.add('open');
+  overlay.classList.add('show');
+};
+overlay.onclick = ()=>{
+  sidebar.classList.remove('open');
+  overlay.classList.remove('show');
+};
+sidebar.querySelectorAll('a[data-page]').forEach(a=>{
+  a.onclick = (e)=>{
+    e.preventDefault();
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+    showPage(a.dataset.page);
+  };
+});
+
+/* ========== تسجيل الدخول ========== */
+async function doLogin(){
+  const u = $('#loginUser').value.trim().toLowerCase();
+  const p = $('#loginPass').value.trim();
+  if(!u||!p) return showMsg('loginMsg','⚠️ أدخل اسم المستخدم وكلمة المرور','err');
+  showMsg('loginMsg','جارِ التحقق من بياناتك…','ok');
+  try{
+    const qMand = query(collection(db,'mandoubs'),
+                        where('user','==',u),
+                        where('password','==',p));
+    const snap = await getDocs(qMand);
+    if(snap.empty){
+      return showMsg('loginMsg','❌ بيانات الدخول غير صحيحة','err');
+    }
+    const d = snap.docs[0].data();
+    if(d.status === 'inactive'){
+      return showMsg('loginMsg','🚫 تم إيقاف حسابك من قبل الإدارة','err');
+    }
+    const sess = {
+      id: snap.docs[0].id,
+      name: d.name || '',
+      phone: d.phone || '',
+      user: d.user || ''
+    };
+    saveSession(sess);
+    $('#loginScreen').style.display='none';
+    $('#app').style.display='block';
+    $('#welcomeText').textContent = `أهلاً كابتن ${sess.name||sess.user}`;
+    $('#sidebarUser').textContent = `${sess.name||sess.user} — كابتن توصيل`;
+
+    Swal.fire({
+      icon:'success',
+      title:`مرحباً كابتن ${sess.name||sess.user}`,
+      text:'تم تسجيل الدخول بنجاح',
+      timer:1100,
+      showConfirmButton:false
+    });
+
+    showPage('home');
+  }catch(e){
+    showMsg('loginMsg','خطأ اتصال: '+e.message,'err');
+  }
+}
+$('#doLogin').onclick = doLogin;
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && $('#loginScreen').style.display!=='none'){
+    doLogin();
+  }
+});
+
+/* ========== تسجيل الخروج ========== */
+$('#logoutBtn').onclick = (e)=>{
+  e.preventDefault();
+  Swal.fire({
+    title:'تأكيد الخروج',
+    text:'هل تريد تسجيل الخروج من التطبيق؟',
+    icon:'warning',
+    showCancelButton:true,
+    confirmButtonText:'نعم',
+    cancelButtonText:'لا'
+  }).then(r=>{
+    if(!r.isConfirmed) return;
+    clearSession();
+    location.reload();
+  });
+};
+
+/* ========== بدء التطبيق (استعادة جلسة) ========== */
+(function init(){
+  const ses = getSession();
+  if(ses){
+    $('#loginScreen').style.display='none';
+    $('#app').style.display='block';
+    $('#welcomeText').textContent = `أهلاً كابتن ${ses.name||ses.user}`;
+    /* ✅ FIX: كان خطأ اسم متغير (sess) يوقف السكربت */
+    $('#sidebarUser').textContent = `${ses.name||ses.user} — كابتن توصيل`;
+    showPage('home');
+  }else{
+    $('#loginScreen').style.display='flex';
+    $('#app').style.display='none';
+  }
+})();
+
+/* ========== تبديل الصفحات ========== */
+async function showPage(p){
+  const ses = getSession();
+  if(!ses){
+    $('#loginScreen').style.display='flex';
+    $('#app').style.display='none';
+    return;
+  }
+  currentPage = p;
+  if(p==='home') return renderAccounts();
+  if(p==='orders') return renderOrders();
+  if(p==='search') return renderSearch();
+  if(p==='support') return renderSupport();
+  if(p==='notifications') return renderNotifications();
+  if(p==='about') return renderAbout();
+  if(p==='archive') return renderArchive();
+}
+window.showPage = showPage;
+
+/* ========== الصفحة: الحسابات (الرئيسية) ========== */
+async function renderAccounts(){
+  const ses = getSession();
+  const qDel = query(collection(db,'orders'),
+                     where('mandoubId','==',ses.id),
+                     where('status','==','delivered'));
+  const snap = await getDocs(qDel);
+  let total=0, count=0;
+  snap.forEach(d=>{
+    const o=d.data();
+    total += Number(o.amount||0);
+    count++;
+  });
+  const fees = count*1000;
+  const net = total - fees;
+
+  content.innerHTML = `
+    <div class="card card-dark">
+      <div class="section-header">
+        <h3>ملخص حسابات الكابتن</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box stat-total">
+          المبلغ الكلي
+          <span>${fmtN(total)} د.ع</span>
+        </div>
+        <div class="stat-box stat-fees">
+          أجور الكابتن
+          <span>${fmtN(fees)} د.ع</span>
+        </div>
+        <div class="stat-box stat-net">
+          المبلغ الصافي
+          <span>${fmtN(net)} د.ع</span>
+        </div>
+      </div>
+      <p class="muted">يعتمد هذا الملخص على جميع الطلبات التي حالتها <b>واصل</b> في النظام.</p>
+      <p class="thanks">شكراً كابتن ${ses.name||ses.user} على جهودك وتعبك اليومي ❤️</p>
+    </div>
+  `;
+}
+
+/* ========== الصفحة: الطلبات (مع onSnapshot) ========== */
+async function renderOrders(){
+  const ses = getSession();
+  content.innerHTML = `
+    <div class="card">
+      <div class="section-header">
+        <h3>قوائم الطلبات</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <div class="tabs" id="orderTabs">
+        <div class="tab active" data-k="pending">قيد التنفيذ <span class="pill-count" id="cnt-pending">0</span></div>
+        <div class="tab" data-k="delivered">الواصل <span class="pill-count" id="cnt-delivered">0</span></div>
+        <div class="tab" data-k="delayed">المؤجل <span class="pill-count" id="cnt-delayed">0</span></div>
+        <div class="tab" data-k="rejected">الرفض <span class="pill-count" id="cnt-rejected">0</span></div>
+      </div>
+      <div id="ordersWrap"></div>
+    </div>
+  `;
+
+  const tabsEl  = document.getElementById('orderTabs');
+  const wrapEl  = document.getElementById('ordersWrap');
+  let   lists   = {pending:[], delivered:[], delayed:[], rejected:[]};
+
+  function attachWaslCopyHandlers(){
+    const pressMs = 500; // ✅ A = 0.5 ثانية
+    document.querySelectorAll('.wasl-copy').forEach(el=>{
+      let timer = null;
+      let longPressed = false;
+
+      const start = (e)=>{
+        longPressed = false;
+        clearTimeout(timer);
+        timer = setTimeout(async ()=>{
+          longPressed = true;
+          const w = (el.dataset.wasl||'').trim();
+          if(!w) return;
+          const ok = await copyText(w);
+          Swal.fire('تم','تم نسخ رقم الوصل','success');
+        }, pressMs);
+      };
+      const end = ()=>{
+        clearTimeout(timer);
+      };
+
+      // ضغط مطوّل موبايل
+      el.addEventListener('touchstart', start, {passive:true});
+      el.addEventListener('touchend', end);
+      el.addEventListener('touchcancel', end);
+
+      // ضغط مطوّل ديسكتوب
+      el.addEventListener('mousedown', start);
+      el.addEventListener('mouseup', end);
+      el.addEventListener('mouseleave', end);
+
+      // منع قائمة كلك يمين
+      el.addEventListener('contextmenu', e=>e.preventDefault());
+
+      // ضغط عادي (نسخ سريع)
+      el.onclick = async ()=>{
+        if(longPressed) return; // حتى ما يكرر بعد المطوّل
+        const w = (el.dataset.wasl||'').trim();
+        if(!w) return;
+        await copyText(w);
+        Swal.fire('تم','تم نسخ رقم الوصل','success');
+      };
+    });
+  }
+
+  function draw(kind){
+    currentOrdersTab = kind;
+    const arr = lists[kind] || [];
+    if(!arr.length){
+      wrapEl.innerHTML = `<div class="card">لا توجد طلبات في هذه القائمة</div>`;
+      return;
+    }
+    let html = `<div class="orders">`;
+    arr.forEach(o=>{
+      const created = o.createdAt?.toDate ? o.createdAt.toDate() : null;
+      const last    = o.lastUpdate?.toDate ? o.lastUpdate.toDate() : created;
+      let cls = 'pending';
+      if(o.status==='delivered') cls='delivered';
+      else if(o.status==='delayed') cls='delayed';
+      else if(o.status==='rejected' || o.status==='temp') cls='rejected';
+
+      const safeWasl = (o.wasl||'').replace(/'/g,"&#39;");
+
+      html += `
+        <div class="order-card ${cls}">
+          <p>📦 الوصل:
+            <span class="wasl-copy" data-wasl="${o.wasl||''}">${o.wasl||'-'}</span>
+            <span class="badge-status">${statusText(o.status)}</span>
+          </p>
+          <p>👤 الشركة: ${o.company||'-'}</p>
+          <p>📱
+            <span class="cust-phone" data-phone="${o.phone||''}">${o.phone||'-'}</span>
+            • 🏙️ ${o.gov||'-'} — ${o.area||'-'}
+          </p>
+          <p>💵 المبلغ: <b>${fmtN(o.amount||0)} د.ع</b></p>
+          <p class="muted">⏱ أُضيف: ${fmtDate(created)} • آخر تحديث: ${fmtDate(last)}</p>
+          ${o.reason ? `<p>📌 سبب: ${o.reason}${o.newAmount ? ' — سعر جديد: '+fmtN(o.newAmount):''}</p>`:''}
+          <div class="actions">
+            ${
+              o.status==='pending'
+              ? `
+                <button class="btnx btnx-green" onclick="setDeliveredMandoub('${o._id}','${safeWasl}')">✅ واصل</button>
+                <button class="btnx btnx-yellow" onclick="setDelayedMandoub('${o._id}','${safeWasl}')">⏳ مؤجل</button>
+                <button class="btnx btnx-red" onclick="askRejectMandoub('${o._id}','${safeWasl}')">❌ رفض / تغير سعر</button>
+              `
+              : o.status==='delivered'
+              ? ``
+              : o.status==='delayed'
+              ? `
+                <button class="btnx btnx-green" onclick="setDeliveredMandoub('${o._id}','${safeWasl}')">✅ واصل</button>
+                <button class="btnx btnx-red" onclick="askRejectMandoub('${o._id}','${safeWasl}')">❌ رفض / تغير سعر</button>
+              `
+              : (o.status==='rejected' || o.status==='temp')
+              ? `
+                <button class="btnx btnx-green" onclick="setDeliveredMandoub('${o._id}','${safeWasl}')">✅ واصل</button>
+                <button class="btnx btnx-yellow" onclick="setDelayedMandoub('${o._id}','${safeWasl}')">⏳ مؤجل</button>
+              `
+              : ``
+            }
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+    wrapEl.innerHTML = html;
+
+    // ✅ نسخ رقم الوصل بالضغط المطوّل + العادي
+    attachWaslCopyHandlers();
+
+    // منبثق الهاتف
+    document.querySelectorAll('.cust-phone[data-phone]').forEach(el=>{
+      el.onclick = ()=>{
+        const phone = (el.dataset.phone||'').trim();
+        if(!phone) return;
+        const intl = '964'+phone.replace(/^0/,'');
+        Swal.fire({
+          title:`خيارات الهاتف: ${phone}`,
+          html:`
+            <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px">
+              <a href="tel:${phone}" class="btnx btnx-green" style="text-decoration:none">📞 اتصال</a>
+              <a href="sms:${phone}" class="btnx btnx-yellow" style="text-decoration:none">✉️ SMS</a>
+              <a href="https://wa.me/${intl}" target="_blank" class="btnx" style="background:#25d366;color:#fff;text-decoration:none">💬 واتساب</a>
+              <button id="copyPhoneBtn" class="btnx btnx-red">📋 نسخ</button>
+            </div>
+          `,
+          showConfirmButton:false,
+          showCloseButton:true
+        });
+        setTimeout(()=>{
+          const b = document.getElementById('copyPhoneBtn');
+          if(b){
+            b.onclick = ()=>{
+              copyText(phone).then(()=>{
+                Swal.fire('تم','تم نسخ رقم الهاتف','success');
+              });
+            };
+          }
+        },50);
+      };
+    });
+  }
+
+  function recalcFromSnapshot(snap){
+    lists = {pending:[], delivered:[], delayed:[], rejected:[]};
+    snap.forEach(d=>{
+      const o = d.data();
+      o._id = d.id;
+      const raw = o.status || 'pending';
+      const st  = (raw==='temp' ? 'rejected' : raw);
+      if     (st==='pending')   lists.pending.push(o);
+      else if(st==='delivered') lists.delivered.push(o);
+      else if(st==='delayed')   lists.delayed.push(o);
+      else if(st==='rejected')  lists.rejected.push(o);
+      else                      lists.pending.push(o);
+    });
+    $('#cnt-pending').textContent   = lists.pending.length;
+    $('#cnt-delivered').textContent = lists.delivered.length;
+    $('#cnt-delayed').textContent   = lists.delayed.length;
+    $('#cnt-rejected').textContent  = lists.rejected.length;
+    draw(currentOrdersTab);
+  }
+
+  // tabs events
+  tabsEl.querySelectorAll('.tab').forEach(t=>{
+    t.onclick = ()=>{
+      tabsEl.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      draw(t.dataset.k);
+    };
+  });
+
+  // الاشتراك الفوري مع فايرستور
+  if(unsubOrders) unsubOrders();
+  const qAll = query(collection(db,'orders'),
+                     where('mandoubId','==',ses.id));
+  unsubOrders = onSnapshot(qAll,snap=>{
+    recalcFromSnapshot(snap);
+  });
+}
+
+/* ========== عمليات المندوب على الطلبات ========== */
+window.setDeliveredMandoub = async (id,wasl)=>{
+  const ses = getSession();
+  await updateDoc(doc(db,'orders',id),{
+    status:'delivered',
+    deliveredAt:serverTimestamp(),
+    lastUpdate:serverTimestamp()
+  });
+  await addDoc(collection(db,'notifications'),{
+    to:'managers',
+    roleTarget:'manager',
+    type:'order_update',
+    title:'تحديث: واصل',
+    message:`الكابتن ${ses.name||ses.user} حدّث الطلب #${wasl||id} إلى واصل`,
+    orderId:id,
+    by:(ses.name||ses.user),
+    at:serverTimestamp(),
+    seen:false
+  });
+  Swal.fire('تم','تم تحويل الطلب إلى واصل. شكراً كابتن '+(ses.name||ses.user),'success');
+  renderAccounts();
+};
+
+window.setDelayedMandoub = async (id,wasl)=>{
+  const ses = getSession();
+  await updateDoc(doc(db,'orders',id),{
+    status:'delayed',
+    lastUpdate:serverTimestamp()
+  });
+  await addDoc(collection(db,'notifications'),{
+    to:'managers',
+    roleTarget:'manager',
+    type:'order_update',
+    title:'تحديث: مؤجل',
+    message:`الكابتن ${ses.name||ses.user} حدّث الطلب #${wasl||id} إلى مؤجل`,
+    orderId:id,
+    by:(ses.name||ses.user),
+    at:serverTimestamp(),
+    seen:false
+  });
+  Swal.fire('تم','تم نقل الطلب إلى المؤجل','success');
+};
+
+window.askRejectMandoub = async (id,wasl)=>{
+  const {value:reason} = await Swal.fire({
+    title:'سبب الرفض / تغيير السعر',
+    input:'select',
+    inputOptions:{
+      'لا يرد':'لا يرد',
+      'لايرد بعد الاتفاق':'لايرد بعد الاتفاق',
+      'مغلق':'مغلق',
+      'مغلق بعد الاتفاق':'مغلق بعد الاتفاق',
+      'رفض اختلاف الطلب':'رفض اختلاف الطلب',
+      'رفض اختلاف القياس':'رفض اختلاف القياس',
+      'رفض اختلاف اللون':'رفض اختلاف اللون',
+      'الغاء الطلب':'الغاء الطلب',
+      'تغير سعر':'تغير سعر'
+    },
+    inputPlaceholder:'اختر السبب',
+    showCancelButton:true
+  });
+  if(!reason) return;
+
+  const ref  = doc(db,'orders',id);
+  const snap = await getDoc(ref);
+  if(!snap.exists()){
+    Swal.fire('خطأ','الطلب غير موجود في النظام','error');
+    return;
+  }
+  const o          = snap.data();
+  const oldAmount  = Number(o.amount||0);
+  const ses        = getSession();
+  let baseNote     = '';
+  let extraNote    = '';
+
+  if(reason === 'تغير سعر'){
+    const {value:newPriceStr} = await Swal.fire({
+      title:'السعر الجديد',
+      input:'number',
+      inputAttributes:{min:0},
+      showCancelButton:true
+    });
+    if(!newPriceStr) return;
+    const newPrice = Number(newPriceStr);
+    if(!newPrice || newPrice<=0){
+      Swal.fire('تنبيه','يجب إدخال سعر جديد صالح','warning');
+      return;
+    }
+
+    const {isConfirmed:hasReturn} = await Swal.fire({
+      title:'هل يوجد راجع؟',
+      icon:'question',
+      showCancelButton:true,
+      confirmButtonText:'نعم',
+      cancelButtonText:'لا'
+    });
+    if(hasReturn === undefined) return;
+
+    const diff = Math.abs(oldAmount - newPrice);
+    baseNote   = `تغيير السعر من ${fmtN(oldAmount)} إلى ${fmtN(newPrice)} ` + (hasReturn ? 'مع وجود راجع' : 'بدون راجع');
+
+    const {value:note} = await Swal.fire({
+      title:'ملاحظة إضافية (اختياري)',
+      input:'text',
+      showCancelButton:true
+    });
+    if(note) extraNote = note;
+    const finalNote = baseNote + (extraNote ? ' — '+extraNote : '');
+
+    if(hasReturn){
+      // 1) الطلب الأصلي يصبح واصل بالسعر الجديد
+      await updateDoc(ref,{
+        status:'delivered',
+        amount:newPrice,
+        reason:'تغير سعر',
+        managerNote:finalNote,
+        oldAmount:oldAmount,
+        newAmount:newPrice,
+        lastUpdate:serverTimestamp()
+      });
+
+      // 2) طلب جديد مرفوض بقيمة فرق السعر
+      if(diff>0){
+        await addDoc(collection(db,'orders'),{
+          ...o,
+          amount:diff,
+          status:'rejected',
+          reason:'تغير سعر - فرق السعر',
+          managerNote:finalNote,
+          originalAmount:oldAmount,
+          newAmount:newPrice,
+          parentId:id,
+          createdAt:o.createdAt || serverTimestamp(),
+          lastUpdate:serverTimestamp()
+        });
+      }
+
+      await addDoc(collection(db,'notifications'),{
+        to:'managers',
+        roleTarget:'manager',
+        type:'order_update',
+        title:'تغيير سعر مع راجع',
+        message:`الكابتن ${ses.name||ses.user} عدّل الطلب #${wasl||id} إلى سعر جديد مع وجود راجع.`,
+        orderId:id,
+        by:(ses.name||ses.user),
+        at:serverTimestamp(),
+        seen:false
+      });
+    }else{
+      // بدون راجع → نسخة واحدة واصل بالسعر الجديد
+      await updateDoc(ref,{
+        status:'delivered',
+        amount:newPrice,
+        reason:'تغير سعر',
+        managerNote:finalNote,
+        oldAmount:oldAmount,
+        newAmount:newPrice,
+        lastUpdate:serverTimestamp()
+      });
+
+      await addDoc(collection(db,'notifications'),{
+        to:'managers',
+        roleTarget:'manager',
+        type:'order_update',
+        title:'تغيير سعر بدون راجع',
+        message:`الكابتن ${ses.name||ses.user} عدّل الطلب #${wasl||id} إلى سعر جديد بدون راجع.`,
+        orderId:id,
+        by:(ses.name||ses.user),
+        at:serverTimestamp(),
+        seen:false
+      });
+    }
+
+    Swal.fire('تم','تم تطبيق تغيير السعر بنجاح','success');
+    renderAccounts();
+    return;
+  }else{
+    // رفض عادي بدون تغيير سعر
+    const {value:note} = await Swal.fire({
+      title:'ملاحظة إضافية (اختياري)',
+      input:'text',
+      showCancelButton:true
+    });
+    const finalNote = note || '';
+
+    await updateDoc(ref,{
+      status:'rejected',
+      reason,
+      managerNote: finalNote || null,
+      lastUpdate:serverTimestamp()
+    });
+
+    await addDoc(collection(db,'notifications'),{
+      to:'managers',
+      roleTarget:'manager',
+      type:'order_update',
+      title:'تحديث: رفض',
+      message:`الكابتن ${ses.name||ses.user} حدّث الطلب #${wasl||id} إلى حالة رفض (${reason})`,
+      orderId:id,
+      by:(ses.name||ses.user),
+      at:serverTimestamp(),
+      seen:false
+    });
+
+    Swal.fire('تم','تم تحويل الطلب إلى قائمة الرفض','success');
+  }
+};
+
+/* ========== الصفحة: البحث ========== */
+async function renderSearch(){
+  content.innerHTML = `
+    <div class="card">
+      <div class="section-header">
+        <h3>البحث عن طلب</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <div class="search-bar">
+        <input id="searchKey" class="inp" placeholder="رقم الوصل / الهاتف / الشركة">
+        <button class="btn" id="searchBtn" style="max-width:150px;">بحث</button>
+      </div>
+      <div id="searchRes" style="margin-top:10px;"></div>
+    </div>
+  `;
+  $('#searchBtn').onclick = doSearch;
+  $('#searchKey').addEventListener('keydown',e=>{
+    if(e.key==='Enter') doSearch();
+  });
+
+  async function doSearch(){
+    const ses = getSession();
+    const key = $('#searchKey').value.trim();
+    if(!key) return;
+    const all = [];
+    const qOrders = query(collection(db,'orders'), where('mandoubId','==',ses.id));
+    const qArch   = query(collection(db,'archive'), where('mandoubId','==',ses.id));
+    const s1 = await getDocs(qOrders);
+    const s2 = await getDocs(qArch);
+    s1.forEach(d=> all.push({...d.data(), _id:d.id, _where:'current'}));
+    s2.forEach(d=> all.push({...d.data(), _id:d.id, _where:'archive'}));
+
+    const k = key.toLowerCase();
+    const res = all.filter(o=>
+      String(o.wasl||'').includes(key) ||
+      String(o.phone||'').includes(key) ||
+      String(o.company||'').toLowerCase().includes(k)
+    );
+    if(!res.length){
+      $('#searchRes').innerHTML = `<div class="card">لا توجد نتائج مطابقة</div>`;
+      return;
+    }
+    let html = `<div class="orders">`;
+    res.forEach(o=>{
+      const cls = o._where==='archive' ? 'arch-card' : 'pending';
+      const created = o.createdAt?.toDate ? o.createdAt.toDate() : null;
+      html += `
+        <div class="order-card ${cls}">
+          <p>📦 الوصل: <b>${o.wasl||'-'}</b> — ${o._where==='archive'?'أرشيف':'حالي'}</p>
+          <p>👤 الشركة: ${o.company||'-'}</p>
+          <p>📱 ${o.phone||'-'} • 🏙️ ${o.gov||'-'} — ${o.area||'-'}</p>
+          <p>💵 المبلغ: ${fmtN(o.amount||0)} د.ع</p>
+          <p class="muted">الحالة: ${statusText(o.status||o.lastStatus||'-')} • أُضيف: ${fmtDate(created)}</p>
+        </div>
+      `;
+    });
+    html += `</div>`;
+    $('#searchRes').innerHTML = html;
+  }
+}
+
+/* ========== الصفحة: الأرشيف ========== */
+async function renderArchive(){
+  const ses = getSession();
+  const qArch = query(collection(db,'archive'),
+                      where('mandoubId','==',ses.id));
+  const snap = await getDocs(qArch);
+
+  if(snap.empty){
+    content.innerHTML = `
+      <div class="card">
+        <div class="section-header">
+          <h3>الأرشيف</h3>
+          <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+        </div>
+        لا توجد طلبات مؤرشفة حتى الآن.
+      </div>
+    `;
+    return;
+  }
+  const arr = [];
+  snap.forEach(d=>arr.push(d.data()));
+  // ترتيب حسب تاريخ الطلب القديم ثم الحديث
+  arr.sort((a,b)=>{
+    const da = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+    const db = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+    return da-db;
+  });
+
+  let html = `
+    <div class="card">
+      <div class="section-header">
+        <h3>الأرشيف</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <div class="orders">
+  `;
+  arr.forEach(o=>{
+    const dt = o.archivedAt?.toDate ? o.archivedAt.toDate() : null;
+    html += `
+      <div class="order-card arch-card">
+        <p>📦 الوصل: <b>${o.wasl||'-'}</b> • الشركة: ${o.company||'-'}</p>
+        <p>📱 ${o.phone||'-'} • 🏙️ ${o.gov||'-'} — ${o.area||'-'}</p>
+        <p>💵 المبلغ: ${fmtN(o.amount||0)} د.ع</p>
+        <p class="muted">الحالة عند الأرشفة: ${statusText(o.lastStatus||o.status||'-')}</p>
+        <p class="muted">أُرشف في: ${fmtDate(dt)}</p>
+      </div>
+    `;
+  });
+  html += `</div></div>`;
+  content.innerHTML = html;
+}
+
+/* ========== الصفحة: الدعم ========== */
+function renderSupport(){
+  content.innerHTML = `
+    <div class="card">
+      <div class="section-header">
+        <h3>الدعم والمساندة</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <p class="muted">لأي مشكلة في الطلبات أو التطبيق راسل الإدارة مباشرة:</p>
+
+      <div class="support-row">
+        <div>غفار — <b>07810433473</b></div>
+        <div class="support-btns">
+          <a href="tel:07810433473" class="support-btn" style="background:#16a34a;color:#f9fafb;text-decoration:none;">📞 اتصال</a>
+          <a href="https://wa.me/9647810433473" target="_blank" class="support-btn" style="background:#25d366;color:#f9fafb;text-decoration:none;">💬 واتساب</a>
+        </div>
+      </div>
+
+      <div class="support-row">
+        <div>ابراهيم — <b>07823789656</b></div>
+        <div class="support-btns">
+          <a href="tel:07823789656" class="support-btn" style="background:#16a34a;color:#f9fafb;text-decoration:none;">📞 اتصال</a>
+          <a href="https://wa.me/9647823789656" target="_blank" class="support-btn" style="background:#25d366;color:#f9fafb;text-decoration:none;">💬 واتساب</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ========== الصفحة: الإشعارات ========== */
+let unsubNotifs = null;
+function renderNotifications(){
+  content.innerHTML = `
+    <div class="card">
+      <div class="section-header">
+        <h3>الإشعارات</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <div id="notifList"></div>
+    </div>
+  `;
+  const ses = getSession();
+  if(unsubNotifs) unsubNotifs();
+  const qNot = query(
+    collection(db,'notifications'),
+    where('to','==',ses.id),
+    orderBy('at','desc')
+  );
+  unsubNotifs = onSnapshot(qNot,snap=>{
+    let html='';
+    snap.docChanges().forEach(ch=>{
+      if(ch.type==='added'){
+        try{beep.currentTime=0; beep.play();}catch{}
+      }
+    });
+    snap.forEach(d=>{
+      const n = d.data();
+      const dt = n.at?.toDate ? n.at.toDate() : null;
+      html += `
+        <div class="card" style="border-color:#c4b5fd;background:#eef2ff;">
+          <b>🔔 ${n.title||'تنبيه'}</b><br>
+          ${n.message||''}<br>
+          <span class="muted">${n.by||'-'} • ${fmtDate(dt)}</span>
+        </div>
+      `;
+    });
+    $('#notifList').innerHTML = html || 'لا توجد إشعارات حتى الآن';
+  });
+}
+
+/* ========== الصفحة: حول التطبيق ========== */
+function renderAbout(){
+  content.innerHTML = `
+    <div class="card">
+      <div class="section-header">
+        <h3>حول التطبيق</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <p><b>🚚 البغدادي للتوصيل السريع</b></p>
+      <p><b>📍 العنوان:</b> العراق – الأنبار – قضاء هيت – ناحية البغدادي – الشارع العام</p>
+      <p><b>🏢 عن الشركة:</b> شركة متخصّصة بنقل بضائع الشركات وتوصيلها من وإلى محافظة الأنبار، تعمل على مدار 24 ساعة لتخدم الشركات والزبائن بأعلى سرعة وجودة.</p>
+      <p><b>🎯 هدفنا:</b> توفير خدمة توصيل آمنة، سريعة، ومنظمة للمندوبين والشركات عبر نظام إداري متكامل.</p>
+      <p><b>☎️ أرقام الشركة:</b> 07810433473 — 07823789656</p>
+      <p><b>👨‍💻 برمجة وتطوير:</b> المبرمج <b>غفوري</b></p>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
