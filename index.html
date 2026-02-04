@@ -3,435 +3,426 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>البغدادي — لوحة المدير</title>
+<title>البغدادي — تطبيق المندوب</title>
 
 <!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11">
-/* ================== SETTINGS FULL MODULE (FINAL) ================== */
-/*
-يشمل:
-- شعار تطبيق المدير
-- شعار تطبيق المندوب
-- إدارة الموظفين
-- إدارة المندوبين
-- إدارة الأدوار + صلاحيات
-- إدارة المناطق
-*/
-
-
-/* ================== END SETTINGS FULL ================== */
-
-</script>
-<!-- html2canvas للصورة -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
-/* ================== SETTINGS FULL MODULE (FINAL) ================== */
-/*
-يشمل:
-- شعار تطبيق المدير
-- شعار تطبيق المندوب
-- إدارة الموظفين
-- إدارة المندوبين
-- إدارة الأدوار + صلاحيات
-- إدارة المناطق
-*/
-
-async function renderSettings(){
-  const ses = getSession();
-  if(!ses) return requireLogin();
-  if(!roleFlags(ses.role).isTech){
-    return Swal.fire('🚫 ممنوع','الإعدادات للمدير الفني فقط','warning');
-  }
-
-  content.innerHTML = `
-  <div class="card"><h3>⚙️ الإعدادات الكاملة</h3></div>
-
-  <div class="card">
-    <h4>🖼️ شعار تطبيق المدير</h4>
-    <input id="logoManager" class="inp" value="${logoUrl}">
-    <button class="btn" id="saveLogoManager">حفظ</button>
-  </div>
-
-  <div class="card">
-    <h4>🖼️ شعار تطبيق المندوب</h4>
-    <input id="logoMandoub" class="inp" placeholder="رابط شعار المندوب">
-    <button class="btn" id="saveLogoMandoub">حفظ</button>
-  </div>
-
-  <div class="card">
-    <h4>👥 إدارة الموظفين</h4>
-    <button class="btn" id="addEmp">➕ إضافة موظف</button>
-    <div id="empList"></div>
-  </div>
-
-  <div class="card">
-    <h4>🏍️ إدارة المندوبين</h4>
-    <button class="btn" id="addMand">➕ إضافة مندوب</button>
-    <div id="mandList"></div>
-  </div>
-
-  <div class="card">
-    <h4>🔐 إضافة دور جديد</h4>
-    <input id="roleName" class="inp" placeholder="اسم الدور">
-    <label><input type="checkbox" value="orders"> الطلبات</label>
-    <label><input type="checkbox" value="settings"> الإعدادات</label>
-    <label><input type="checkbox" value="accounts"> الحسابات</label>
-    <label><input type="checkbox" value="addOrders"> إضافة طلبات</label>
-    <button class="btn" id="saveRole">حفظ الدور</button>
-  </div>
-
-  <div class="card">
-    <h4>📍 إضافة منطقة جديدة</h4>
-    <input id="newArea" class="inp" placeholder="اسم المنطقة">
-    <button class="btn" id="saveArea">حفظ المنطقة</button>
-    <div id="areaList"></div>
-  </div>
-  `;
-
-  /* شعار المدير */
-  document.getElementById('saveLogoManager').onclick = async()=>{
-    const v=document.getElementById('logoManager').value.trim();
-    if(!v) return;
-    await setDoc(doc(db,'config','global'),{logoUrl:v},{merge:true});
-    logoUrl=v; applyBranding();
-    Swal.fire('تم','تم حفظ شعار المدير','success');
-  };
-
-  /* شعار المندوب */
-  document.getElementById('saveLogoMandoub').onclick = async()=>{
-    const v=document.getElementById('logoMandoub').value.trim();
-    if(!v) return;
-    await setDoc(doc(db,'config','mandoub'),{logoUrl:v},{merge:true});
-    Swal.fire('تم','تم حفظ شعار المندوب','success');
-  };
-
-  /* الموظفين */
-  const empSnap = await getDocs(collection(db,'users'));
-  let eh='';
-  empSnap.forEach(d=>{
-    const u=d.data();
-    eh+=`<div class="small-text">👤 ${u.name||'-'} — ${u.role||''}</div>`;
-  });
-  document.getElementById('empList').innerHTML=eh||'لا يوجد';
-
-  document.getElementById('addEmp').onclick=async()=>{
-    const {value:form}=await Swal.fire({
-      title:'إضافة موظف',
-      html:`
-        <input id="e1" class="swal2-input" placeholder="الاسم">
-        <input id="e2" class="swal2-input" placeholder="الهاتف">
-        <input id="e3" class="swal2-input" placeholder="يوزر">
-        <input id="e4" type="password" class="swal2-input" placeholder="باسورد">
-        <input id="e5" class="swal2-input" placeholder="الدور">
-      `,
-      preConfirm:()=>({
-        name:document.getElementById('e1').value,
-        phone:document.getElementById('e2').value,
-        user:document.getElementById('e3').value,
-        password:document.getElementById('e4').value,
-        role:document.getElementById('e5').value
-      })
-    });
-    if(!form) return;
-    await addDoc(collection(db,'users'),{...form,status:'active'});
-    Swal.fire('تم','تم إضافة الموظف','success');
-    renderSettings();
-  };
-
-  /* المندوبين */
-  const mSnap = await getDocs(collection(db,'mandoubs'));
-  let mh='';
-  mSnap.forEach(d=>{
-    const m=d.data();
-    mh+=`<div class="small-text">🏍️ ${m.name||'-'} — ${m.area||''}</div>`;
-  });
-  document.getElementById('mandList').innerHTML=mh||'لا يوجد';
-
-  document.getElementById('addMand').onclick=async()=>{
-    const {value:form}=await Swal.fire({
-      title:'إضافة مندوب',
-      html:`
-        <input id="m1" class="swal2-input" placeholder="الاسم">
-        <input id="m2" class="swal2-input" placeholder="الهاتف">
-        <input id="m3" class="swal2-input" placeholder="يوزر">
-        <input id="m4" type="password" class="swal2-input" placeholder="باسورد">
-        <input id="m5" class="swal2-input" placeholder="المنطقة">
-      `,
-      preConfirm:()=>({
-        name:document.getElementById('m1').value,
-        phone:document.getElementById('m2').value,
-        user:document.getElementById('m3').value,
-        password:document.getElementById('m4').value,
-        area:document.getElementById('m5').value
-      })
-    });
-    if(!form) return;
-    await addDoc(collection(db,'mandoubs'),form);
-    Swal.fire('تم','تم إضافة المندوب','success');
-    renderSettings();
-  };
-
-  /* الأدوار */
-  document.getElementById('saveRole').onclick=async()=>{
-    const name=document.getElementById('roleName').value.trim();
-    const checks=[...document.querySelectorAll('input[type=checkbox]:checked')];
-    if(!name||!checks.length) return Swal.fire('تنبيه','حدد صلاحية واحدة على الأقل','warning');
-    const data={};
-    checks.forEach(c=>data[c.value]=true);
-    await setDoc(doc(db,'roles',name),data);
-    Swal.fire('تم','تم حفظ الدور','success');
-  };
-
-  /* المناطق */
-  const areaSnap = await getDocs(collection(db,'areas'));
-  let ah='';
-  areaSnap.forEach(d=>ah+=`<div class="small-text">📍 ${d.data().name}</div>`);
-  document.getElementById('areaList').innerHTML=ah||'لا يوجد';
-
-  document.getElementById('saveArea').onclick=async()=>{
-    const v=document.getElementById('newArea').value.trim();
-    if(!v) return;
-    await addDoc(collection(db,'areas'),{name:v});
-    Swal.fire('تم','تمت إضافة المنطقة','success');
-    renderSettings();
-  };
-}
-/* ================== END SETTINGS FULL ================== */
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&display=swap');
   :root{
-    --orange:#f97316; 
-    --orange-soft:#fbbf24;
-    --orange-50:#fff7ed; 
-    --orange-600:#ea580c;
-    --dark:#0f172a; 
+    --brand:#7c3aed;          /* بنفسجي */
+    --brand-50:#f5f3ff;
+    --brand-600:#5b21b6;
+    --dark:#0f172a;
     --muted:#64748b;
-    --green:#16a34a; 
-    --yellow:#f59e0b; 
-    --red:#dc2626; 
-    --violet:#8b5cf6; 
+    --green:#16a34a;
+    --yellow:#f59e0b;
+    --red:#dc2626;
     --blue:#3b82f6;
-    --card:#ffffff; 
+    --violet:#8b5cf6;
+    --card:#ffffff;
     --border:#e5e7eb;
-    --bg:#0b1020;
   }
-  *{box-sizing:border-box}
+  *{box-sizing:border-box;}
   html,body{
     margin:0;height:100%;overflow-x:hidden;
     font-family:'Cairo',sans-serif;
-    background:var(--orange-50);
+    background:var(--brand-50);
     color:#111827;
-    -webkit-user-select:none; 
-    -moz-user-select:none; 
-    -ms-user-select:none; 
+    -webkit-user-select:none;
+    -moz-user-select:none;
+    -ms-user-select:none;
     user-select:none;
   }
   input,textarea,select{
-    -webkit-user-select:text; 
-    -moz-user-select:text; 
-    -ms-user-select:text; 
+    -webkit-user-select:text;
+    -moz-user-select:text;
+    -ms-user-select:text;
     user-select:text;
   }
-  a{color:inherit}
 
-  /* وضع مظلم بسيط */
-  body.dark-mode{
-    background:#020617;
-    color:#e5e7eb;
-  }
-  body.dark-mode .card{
-    background:#020617;
-    color:#e5e7eb;
-    border-color:#1f2937;
-  }
-  body.dark-mode header{
-    background:#0f172a;
-    border-bottom-color:#111827;
-  }
-  body.dark-mode .sidebar{
-    background:#020617;
-  }
-  body.dark-mode .order-card.arch-card{
-    background:#111827;
-    color:#e5e7eb;
-  }
-
-  /* شاشة الدخول - ملكية */
+  /* شاشة الدخول */
   #loginScreen{
     min-height:100vh;
     display:flex;
     align-items:center;
     justify-content:center;
     padding:20px;
-    background:
-      radial-gradient(1200px 800px at 10% -10%, #fff7ed 0%, transparent 60%),
-      radial-gradient(1000px 600px at 110% 10%, #fed7aa 0%, transparent 58%),
-      linear-gradient(135deg,#fb923c,#f97316,#ea580c);
+    background:radial-gradient(circle at top left,#a855f7,#7c3aed,#4c1d95);
   }
   .login-card{
     width:100%;
-    max-width:460px;
-    background:linear-gradient(180deg,#0b1020,#060916);
-    border-radius:22px;
-    padding:26px 22px 22px;
-    box-shadow:0 26px 60px rgba(2,6,23,.85);
-    text-align:center;
+    max-width:420px;
+    background:#0b1020;
+    border-radius:20px;
+    padding:24px 20px 20px;
+    box-shadow:0 20px 50px rgba(15,23,42,.6);
+    color:#e5e7eb;
     position:relative;
     overflow:hidden;
-    color:#e5e7eb;
-    border:1px solid rgba(253,186,116,.35);
   }
   .login-card::before{
     content:"";
     position:absolute;
     inset:-40%;
-    background:
-      radial-gradient(circle at top,#f9731640,#0000 60%),
-      radial-gradient(circle at bottom,#22c55e22,#0000 60%);
+    background:radial-gradient(circle at top,#c4b5fd33,#0000);
     pointer-events:none;
   }
-  .login-logo-wrap{position:relative;margin-bottom:18px}
-  .login-logo-main{
-    font-size:26px;font-weight:800;letter-spacing:1.5px;color:#fffbeb;
-    text-shadow:0 0 12px rgba(248,250,252,.8),0 0 22px rgba(248,250,252,.6);
+  .logo-text{
+    position:relative;
+    margin-bottom:18px;
+    text-align:center;
   }
-  .login-logo-sub{margin-top:4px;font-size:13px;font-weight:700;color:#fed7aa}
-  .login-logo-pill{
-    display:inline-flex;align-items:center;justify-content:center;border-radius:999px;
-    padding:5px 12px;font-size:11px;margin-top:8px;border:1px solid rgba(253,186,116,.7);
-    color:#fed7aa;background:linear-gradient(90deg,rgba(15,23,42,.9),rgba(30,64,175,.9));
+  .logo-main{
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:2px;
+    color:#f9fafb;
+    text-shadow:0 0 10px rgba(129,140,248,.9),
+                0 0 20px rgba(79,70,229,.8);
   }
-  .login-card h2{margin:12px 0 14px;font-size:18px}
+  .logo-sub{
+    font-size:14px;
+    font-weight:700;
+    margin-top:4px;
+    color:#c4b5fd;
+  }
+  .logo-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:999px;
+    padding:4px 10px;
+    font-size:11px;
+    color:#a5b4fc;
+    border:1px solid rgba(129,140,248,.6);
+    background:linear-gradient(90deg,rgba(55,65,81,.8),rgba(15,23,42,.9));
+    margin-top:8px;
+  }
+  .login-card h2{
+    margin:8px 0 14px;
+    font-size:18px;
+    text-align:center;
+  }
   .inp{
-    width:100%;padding:12px 12px;border-radius:12px;margin:7px 0;border:1px solid #1f2937;
-    background:#020617;color:#f9fafb;font-size:15px
+    width:100%;
+    padding:11px 12px;
+    border-radius:10px;
+    margin:6px 0;
+    border:1px solid #1f2937;
+    background:#020617;
+    color:#f9fafb;
+    font-size:14px;
   }
-  .inp::placeholder{color:#4b5563}
-  .inp:focus{outline:none;border-color:#fb923c;box-shadow:0 0 0 2px #fed7aa80}
+  .inp::placeholder{color:#4b5563;}
+  .inp:focus{
+    outline:none;
+    border-color:#818cf8;
+    box-shadow:0 0 0 2px #6366f180;
+  }
   .btn{
-    width:100%;padding:12px;margin-top:10px;border-radius:999px;border:0;
-    background:linear-gradient(135deg,#f97316,#ea580c);
-    color:#f9fafb;font-weight:800;font-size:15px;cursor:pointer;
-    box-shadow:0 14px 30px rgba(124,45,18,.7)
+    width:100%;
+    padding:11px;
+    margin-top:10px;
+    border-radius:999px;
+    border:0;
+    background:linear-gradient(135deg,#7c3aed,#4f46e5);
+    color:#f9fafb;
+    font-weight:800;
+    font-size:15px;
+    cursor:pointer;
+    box-shadow:0 14px 30px rgba(88,28,135,.7);
   }
-  .btn.secondary{
-    background:#0f172a;color:#fff;border:1px solid #334155;box-shadow:none
+  .btn:active{transform:scale(.98);}
+  .small{
+    font-size:11px;
+    color:#9ca3af;
+    margin-top:10px;
+    text-align:center;
   }
-  .btn:active{transform:scale(.98)}
-  .small{font-size:11px;color:#9ca3af;margin-top:10px;text-align:center}
-  .msg{margin-top:6px;font-size:13px;text-align:center}
-  .ok{color:#22c55e}.err{color:#f97316}
+  .msg{margin-top:6px;font-size:13px;text-align:center;}
+  .ok{color:#22c55e;}
+  .err{color:#f97316;}
 
   /* التطبيق */
-  #app{display:none;min-height:100vh}
+  #app{display:none;min-height:100vh;}
 
   header{
-    position:sticky;top:0;z-index:6;background:var(--orange);border-bottom:1px solid #fbbf24;
-    padding:10px 14px;display:flex;align-items:center;justify-content:space-between;color:#fffbeb
+    position:sticky;top:0;z-index:6;
+    background:#020617;
+    color:#e5e7eb;
+    border-bottom:1px solid #111827;
+    padding:10px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
   }
-  .brand{display:flex;align-items:center;gap:10px}
-  .brand .badge{
-    display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:8px 14px;
-    border:1px solid #fed7aa;background:rgba(15,23,42,.18);font-weight:800;font-size:13px;color:#fffbeb;
-    box-shadow:0 0 14px rgba(248,250,252,.65)
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
   }
-  .who{
-    background:rgba(15,23,42,.18);border-radius:999px;padding:6px 10px;font-size:12px;border:1px solid #fed7aa99;
-    color:#fefce8;max-width:45%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+  .brand-pill{
+    border-radius:999px;
+    padding:8px 14px;
+    border:1px solid #4c1d95;
+    background:radial-gradient(circle at top,#7c3aed,#4c1d95);
+    color:#ede9fe;
+    font-weight:800;
+    font-size:13px;
+    box-shadow:0 0 18px rgba(129,140,248,.7);
+  }
+  .welcome{
+    font-size:12px;
+    color:#a5b4fc;
   }
   .menu-btn{
-    background:rgba(15,23,42,.14);border:1px solid #fed7aa88;color:#fffbeb;border-radius:10px;padding:8px 12px;cursor:pointer
+    background:#020617;
+    border:1px solid #1e293b;
+    border-radius:10px;
+    padding:8px 10px;
+    cursor:pointer;
+    color:#e5e7eb;
   }
 
-  /* القائمة اليمنى */
+  /* القائمة الجانبية */
   .sidebar{
-    position:fixed;inset:0 0 0 auto;width:0;max-width:300px;background:#020617;color:#fff;transition:width .25s;
-    overflow:hidden;z-index:20;box-shadow:-4px 0 30px rgba(15,23,42,.9)
+    position:fixed;
+    inset:0 0 0 auto;
+    width:0;
+    max-width:280px;
+    background:#020617;
+    color:#e5e7eb;
+    transition:width .25s;
+    overflow:hidden;
+    z-index:20;
+    box-shadow:-4px 0 20px rgba(15,23,42,.8);
   }
-  .sidebar.open{width:88%}
-  .sidebar-header{padding:18px;border-bottom:1px solid #111827}
-  .sidebar-title-badge{
-    display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;
-    border:1px solid #f97316;color:#fed7aa;background:rgba(15,23,42,.9)
+  .sidebar.open{width:82%;}
+  .sidebar-header{
+    padding:18px 16px;
+    border-bottom:1px solid #111827;
   }
-  .sidebar-user{margin-top:10px;font-size:13px;opacity:.85}
+  .sidebar-title{
+    font-weight:700;
+    margin-bottom:4px;
+  }
+  .sidebar-user{
+    font-size:13px;
+    color:#9ca3af;
+  }
   .nav a{
-    display:block;color:#e5e7eb;text-decoration:none;padding:12px 18px;border-bottom:1px solid #020617;font-size:14px
+    display:block;
+    color:#e5e7eb;
+    text-decoration:none;
+    padding:11px 18px;
+    font-size:14px;
+    border-bottom:1px solid #020617;
   }
-  .nav a:hover{background:#111827}
-  .overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:15}
-  .overlay.show{display:block}
+  .nav a:hover{
+    background:#111827;
+  }
+  .overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.6);
+    z-index:15;
+  }
+  .overlay.show{display:block;}
 
-  .content{padding:12px}
+  /* المحتوى */
+  .content{
+    padding:12px;
+  }
   .card{
-    background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:10px;
   }
-  .tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px}
+  .card-dark{
+    background:#020617;
+    border-color:#111827;
+    color:#e5e7eb;
+  }
+  .section-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:6px;
+    margin-bottom:8px;
+  }
+  .section-header h3{margin:0;font-size:16px;}
+  .back-btn{
+    border-radius:999px;
+    border:1px solid #e5e7eb;
+    background:#0f172a;
+    color:#e5e7eb;
+    padding:6px 12px;
+    font-size:12px;
+    cursor:pointer;
+  }
+
+  .stat-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:8px;
+  }
+  .stat-box{
+    border-radius:12px;
+    padding:10px;
+    text-align:center;
+    font-weight:700;
+    font-size:13px;
+    color:#f9fafb;
+  }
+  .stat-box span{
+    display:block;
+    margin-top:4px;
+    font-size:18px;
+  }
+  .stat-total{background:linear-gradient(135deg,#7c3aed,#4f46e5);}
+  .stat-fees{background:linear-gradient(135deg,#6366f1,#0ea5e9);}
+  .stat-net{background:linear-gradient(135deg,#22c55e,#16a34a);}
+
+  .muted{color:var(--muted);font-size:12px;margin-top:6px;}
+  .thanks{
+    margin-top:10px;
+    font-size:13px;
+    color:#4b5563;
+  }
+
+  /* Tabs للطلبات */
+  .tabs{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding-bottom:6px;
+  }
   .tab{
-    white-space:nowrap;border:1px solid var(--border);border-radius:999px;padding:8px 12px;cursor:pointer;background:#fff;font-size:13px
+    white-space:nowrap;
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:6px 10px;
+    cursor:pointer;
+    background:#f9fafb;
+    font-size:13px;
   }
-  .tab.active{background:var(--orange);color:#fff;border-color:transparent}
+  .tab.active{
+    background:#7c3aed;
+    border-color:#5b21b6;
+    color:#f9fafb;
+  }
   .pill-count{
-    background:rgba(255,255,255,.25);padding:2px 8px;border-radius:999px;margin-inline-start:6px;font-size:11px
+    background:rgba(15,23,42,.12);
+    border-radius:999px;
+    padding:2px 8px;
+    margin-inline-start:4px;
+    font-size:11px;
   }
-  .orders{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+
+  .orders{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+    margin-top:10px;
+  }
   .order-card{
-    border-radius:12px;padding:12px;color:#fff;box-shadow:0 2px 8px rgba(15,23,42,.22);font-size:13px
+    border-radius:12px;
+    padding:11px 10px;
+    color:#f9fafb;
+    box-shadow:0 2px 8px rgba(15,23,42,.4);
+    font-size:13px;
   }
-  .order-card p{margin:4px 0}
-  .actions .btnx{
-    border:0;border-radius:999px;padding:7px 10px;margin:4px 3px;cursor:pointer;font-size:12px;font-weight:600
-  }
-  .btnx-green{background:var(--green);color:#f0fdf4}
-  .btnx-yellow{background:var(--yellow);color:#111}
-  .btnx-red{background:var(--red);color:#fee2e2}
-  .btnx-gray{background:#334155;color:#e5e7eb}
-  .pending{background:var(--blue)}
-  .temp{background:#facc15;color:#111}
-  .delayed{background:var(--violet)}
-  .rejected{background:var(--red)}
-  .delivered{background:#22c55e}
-  .wasl-copy{text-decoration:underline;cursor:pointer}
+  .order-card p{margin:4px 0;}
+  .pending{background:linear-gradient(135deg,#2563eb,#1d4ed8);}
+  .delivered{background:linear-gradient(135deg,#16a34a,#22c55e);}
+  .delayed{background:linear-gradient(135deg,#f59e0b,#eab308);}
+  .rejected{background:linear-gradient(135deg,#b91c1c,#dc2626);}
 
-  .search-bar{display:flex;gap:8px}
-  .search-bar input{flex:1}
-  .arch-card{background:#f3f4f6;color:#111827;border:1px solid #d1d5db}
+  .wasl-copy{
+    text-decoration:underline;
+    cursor:pointer;
+  }
+  .cust-phone{
+    text-decoration:underline;
+    cursor:pointer;
+  }
 
-  /* شاشة تقرير المحاسبة */
-  #accReportWrapper{
-    position:fixed;inset:0;background:#e5e7eb;z-index:50;display:none;overflow:auto;padding:18px 8px
+  .badge-status{
+    display:inline-block;
+    border-radius:999px;
+    padding:2px 8px;
+    font-size:11px;
+    background:rgba(15,23,42,.25);
   }
-  #accReportShell{max-width:980px;margin:0 auto}
-  .acc-top-bar{
-    display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px
-  }
-  .acc-logo-text{font-weight:800;font-size:18px;color:#f97316;white-space:nowrap}
-  .acc-btn{
-    border:0;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;background:#0f172a;color:#fff
-  }
-  .acc-btn.secondary{background:#ffffff;color:#111827;border:1px solid #cbd5f5}
-  #accReport{
-    background:#fff;padding:20px;margin:0 auto;border-radius:12px;width:900px;max-width:100%;
-    box-shadow:0 4px 12px rgba(15,23,42,.25);font-family:"Tahoma",sans-serif
-  }
-  #accReport h2{margin:0 0 20px;color:#f97316;text-align:center;font-size:20px;letter-spacing:1px}
-  .top-boxes{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-bottom:20px}
-  .box-group{display:flex;gap:10px;flex:1;min-width:260px}
-  .box{flex:1;background:#f97316;color:#fff;padding:10px;border-radius:8px;font-size:14px;font-weight:bold;text-align:center}
-  #accReport table{width:100%;border-collapse:collapse;font-size:14px;margin-top:15px}
-  #accReport th,#accReport td{border:1px solid #ccc;padding:8px;text-align:center}
-  #accReport th{background:#f97316;color:#fff}
-  #accReport .footer{margin-top:15px;text-align:right;font-size:14px;font-weight:bold}
 
-  audio{display:none}
-  .muted{color:var(--muted)}
-  .small-text{font-size:12px;color:var(--muted)}
+  .actions{
+    margin-top:6px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .btnx{
+    border-radius:999px;
+    border:0;
+    padding:6px 9px;
+    font-size:12px;
+    cursor:pointer;
+    font-weight:600;
+  }
+  .btnx-green{background:#22c55e;color:#052e16;}
+  .btnx-yellow{background:#facc15;color:#422006;}
+  .btnx-red{background:#ef4444;color:#fef2f2;}
+
+  /* بحث */
+  .search-bar{
+    display:flex;
+    gap:8px;
+  }
+  .search-bar input{flex:1;}
+
+  /* الأرشيف */
+  .arch-card{
+    background:#e5e7eb;
+    color:#111827;
+    border:1px solid #cbd5f5;
+  }
+
+  /* الدعم */
+  .support-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:6px;
+    margin:6px 0;
+    padding:8px 10px;
+    border-radius:10px;
+    background:#f1f5f9;
+    font-size:14px;
+  }
+  .support-btns{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .support-btn{
+    border-radius:999px;
+    border:0;
+    padding:4px 9px;
+    font-size:12px;
+    cursor:pointer;
+    font-weight:600;
+  }
+
+  /* الإشعارات */
+  audio{display:none;}
 
   @media (min-width:768px){
-    .sidebar.open{width:300px}
-    .orders{grid-template-columns:repeat(2,1fr)}
+    .sidebar.open{width:280px;}
   }
 </style>
 </head>
@@ -440,18 +431,17 @@ async function renderSettings(){
 <!-- شاشة الدخول -->
 <section id="loginScreen">
   <div class="login-card">
-    <img id="loginLogoImg" src="" alt="شعار البغدادي" style="width:96px;height:96px;border-radius:24px;object-fit:cover;margin-bottom:10px;box-shadow:0 0 20px rgba(0,0,0,.45);border:2px solid rgba(253,186,116,.7)">
-    <div class="login-logo-wrap">
-      <div class="login-logo-main">البغدادي للتوصيل السريع</div>
-      <div class="login-logo-sub">نظام الإدارة المركزية</div>
-      <div class="login-logo-pill">لوحة المدير (الفني / التنفيذي / المتابعة)</div>
+    <div class="logo-text">
+      <div class="logo-main">البغدادي للتوصيل السريع</div>
+      <div class="logo-sub">تطبيق الكابتن (المندوب)</div>
+      <div class="logo-pill">نظام إداري وربط مباشر مع لوحة المدير</div>
     </div>
-    <h2>تسجيل الدخول</h2>
-    <input id="loginUser" class="inp" placeholder="اسم المستخدم">
+    <h2>تسجيل دخول الكابتن</h2>
+    <input id="loginUser" class="inp" placeholder="اسم المستخدم (يوزر الكابتن)">
     <input id="loginPass" class="inp" type="password" placeholder="كلمة المرور">
     <button id="doLogin" class="btn">دخول</button>
     <div id="loginMsg" class="msg"></div>
-    <div class="small">© 2025 البغدادي للتوصيل السريع</div>
+    <div class="small">© 2025 البغدادي للتوصيل السريع — جميع الحقوق محفوظة</div>
   </div>
 </section>
 
@@ -460,20 +450,26 @@ async function renderSettings(){
   <header>
     <button id="openMenu" class="menu-btn">☰</button>
     <div class="brand">
-      <img id="headerLogoImg" src="" alt="شعار" style="width:32px;height:32px;border-radius:999px;object-fit:cover;border:1px solid rgba(253,186,116,.7)">
-      <span class="badge">البغدادي — لوحة المدير</span>
+      <div class="brand-pill">البغدادي — الكابتن</div>
+      <div class="welcome" id="welcomeText"></div>
     </div>
-    <div id="whoami" class="who"></div>
   </header>
 
-  <!-- قائمة يمين -->
+  <!-- القائمة الجانبية -->
   <aside id="sidebar" class="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-title-badge">القائمة الرئيسية</div>
-      <div id="sidebarUser" class="sidebar-user"></div>
+      <div class="sidebar-title">القائمة الرئيسية</div>
+      <div class="sidebar-user" id="sidebarUser"></div>
     </div>
-    <nav class="nav" id="navLinks">
-      <!-- الروابط تتولد حسب الصلاحية -->
+    <nav class="nav">
+      <a href="#" data-page="home">🏠 الحسابات (الرئيسية)</a>
+      <a href="#" data-page="orders">📦 الطلبات</a>
+      <a href="#" data-page="search">🔎 البحث</a>
+      <a href="#" data-page="archive">📁 الأرشيف</a>
+      <a href="#" data-page="support">🛟 الدعم</a>
+      <a href="#" data-page="notifications">🔔 الإشعارات</a>
+      <a href="#" data-page="about">ℹ️ حول التطبيق</a>
+      <a href="#" id="logoutBtn">🚪 تسجيل الخروج</a>
     </nav>
   </aside>
   <div id="overlay" class="overlay"></div>
@@ -481,58 +477,16 @@ async function renderSettings(){
   <main class="content" id="content"></main>
 </section>
 
-<!-- شاشة تقرير المحاسبة -->
-<div id="accReportWrapper">
-  <div id="accReportShell">
-    <div class="acc-top-bar">
-      <button id="accBackBtn" class="acc-btn secondary">⬅ رجوع</button>
-      <div style="display:flex;align-items:center;gap:8px">
-        <img id="accLogoImg" src="" alt="شعار" style="width:40px;height:40px;border-radius:12px;object-fit:cover;border:1px solid #f97316">
-        <div class="acc-logo-text">البغدادي للتوصيل السريع</div>
-      </div>
-      <button id="accDownloadBtn" class="acc-btn">⬇ تنزيل الصورة</button>
-    </div>
-    <div id="accReport">
-      <h2>تقرير محاسبة مندوب</h2>
-      <div class="top-boxes">
-        <div class="box-group">
-          <div class="box" id="bxTotal">المبلغ الكلي: 0</div>
-          <div class="box" id="bxFees">الأجور: 0</div>
-          <div class="box" id="bxNet">الصافي: 0</div>
-        </div>
-        <div class="box-group">
-          <div class="box" id="bxOp">رقم العملية: -</div>
-          <div class="box" id="bxDate">التاريخ: -</div>
-          <div class="box" id="bxCount">عدد الطلبات: 0</div>
-        </div>
-      </div>
-      <table id="accTable">
-        <thead>
-          <tr>
-            <th>تسلسل</th>
-            <th>رقم الطلب</th>
-            <th>اسم الشركة</th>
-            <th>المحافظة</th>
-            <th>المنطقة</th>
-            <th>المبلغ الكلي</th>
-            <th>المبلغ الصافي</th>
-          </tr>
-        </thead>
-        <tbody id="accBody"></tbody>
-      </table>
-      <div class="footer" id="accFooter">اسم المندوب: - — اسم المحاسب: -</div>
-    </div>
-  </div>
-</div>
-
+<!-- تنبيه صوتي للإشعارات -->
 <audio id="beep" preload="auto" src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQAAACAA"></audio>
 
+<!-- Firebase + منطق التطبيق -->
 <script type="module">
 /* ========== Firebase ========== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
-  getFirestore, collection, query, where, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, serverTimestamp, orderBy, setDoc
+  getFirestore, collection, query, where, getDocs, getDoc,
+  addDoc, updateDoc, doc, onSnapshot, serverTimestamp, orderBy
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -546,184 +500,54 @@ const firebaseConfig = {
 const appFB = initializeApp(firebaseConfig);
 const db = getFirestore(appFB);
 
-/* ========== Helpers & Global Config ========== */
-
-/* ===== AUTO LOGIN (BYPASS LOGIN SCREEN) ===== */
-(function(){
-  const s = localStorage.getItem('managerSession');
-  if(!s){
-    localStorage.setItem('managerSession', JSON.stringify({
-      id:'auto-tech',
-      user:'auto',
-      name:'مدير النظام',
-      role:'المدير الفني',
-      status:'active'
-    }));
-  }
-})();
-
+/* ========== Helpers ========== */
 const $ = s => document.querySelector(s);
 const content = $('#content');
 const overlay = $('#overlay');
 const sidebar = $('#sidebar');
 const beep = $('#beep');
+
 const fmtN = n => Number(n||0).toLocaleString('en-US');
 
-// 1 = ألف دينار في حقل المبلغ عند الإضافة
-const AMOUNT_UNIT = 1000;
-
-// أجرة المندوب لكل طلب واصل (قابلة للتعديل من قسم الإعدادات)
-let feePerOrder = 1000;
-
-// رابط الشعار (قابل للتعديل)
-let logoUrl = "https://i.imgur.com/Tj0vPZT.jpg";
-
-// نص من نحن في حول التطبيق (قابل للتعديل)
-let aboutText = "شركة مختصة بنقل وتوصيل بضائع الشركات والزبائن 24 ساعة.";
-
-const apm = d => {
+function apm(d){
   if(!d || !(d instanceof Date)) return '-';
-  let h=d.getHours(),m=(''+d.getMinutes()).padStart(2,'0'),ap=h>=12?'م':'ص';
-  h=h%12||12;
+  let h=d.getHours(), m=(''+d.getMinutes()).padStart(2,'0');
+  const ap = h>=12?'م':'ص';
+  h = h%12 || 12;
   return `${h}:${m} ${ap}`;
-};
-function tsToDate(ts){
-  if(!ts) return null;
-  if(ts.toDate) return ts.toDate();
-  if(ts instanceof Date) return ts;
-  return null;
 }
-function formatDateTime(ts){
-  const d = tsToDate(ts);
-  if(!d) return '-';
-  const dateStr = d.toLocaleDateString('ar-IQ');
-  return `${dateStr} ${apm(d)}`;
+function fmtDate(d){
+  if(!d || !(d instanceof Date)) return '-';
+  return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${apm(d)}`;
 }
 function showMsg(id,msg,type){
   const el = $('#'+id);
   if(!el) return;
-  el.className='msg '+type;
-  el.textContent=msg;
+  el.className = 'msg '+type;
+  el.textContent = msg;
 }
 function statusText(s){
-  return s==='pending' ? 'قيد التنفيذ' :
-         s==='temp'    ? 'مؤقت لاتخاذ القرار' :
-         s==='delayed' ? 'مؤجل' :
-         s==='delivered' ? 'واصل' :
-         'مرفوض';
-}
-const toast = Swal.mixin({toast:true,position:'top',showConfirmButton:false,timer:1200,timerProgressBar:true});
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function randOp(){ return Math.floor(100000+Math.random()*900000).toString(); }
-
-/* شعارات */
-function applyBranding(){
-  const src = logoUrl;
-  ['loginLogoImg','headerLogoImg','accLogoImg','aboutLogoImg'].forEach(id=>{
-    const img=document.getElementById(id);
-    if(img && src) img.src = src;
-  });
+  return s==='pending'  ? 'قيد التنفيذ' :
+         s==='delivered'? 'واصل' :
+         s==='delayed'  ? 'مؤجل' :
+         (s==='rejected' || s==='temp') ? 'رفض' :
+         s || '-';
 }
 
-/* ثيم (مظلم / عادي) */
-function applyTheme(){
-  const t = localStorage.getItem('theme') || 'light';
-  document.body.classList.toggle('dark-mode', t==='dark');
+/* ========== جلسة الكابتن ========== */
+function getSession(){
+  try{return JSON.parse(localStorage.getItem('mandoubSession')||'null');}catch{return null;}
 }
-function setTheme(t){
-  localStorage.setItem('theme', t);
-  applyTheme();
+function saveSession(o){
+  try{localStorage.setItem('mandoubSession',JSON.stringify(o));}catch{}
 }
-
-/* تحميل إعدادات عامة من Firestore */
-async function loadConfig(){
-  try{
-    const cfgRef = doc(db,'config','global');
-    const snap = await getDoc(cfgRef);
-    if(snap.exists()){
-      const c = snap.data();
-      if(typeof c.feePerOrder === 'number') feePerOrder = c.feePerOrder;
-      if(typeof c.logoUrl === 'string' && c.logoUrl) logoUrl = c.logoUrl;
-      if(typeof c.aboutText === 'string' && c.aboutText) aboutText = c.aboutText;
-    }else{
-      await setDoc(cfgRef,{feePerOrder,logoUrl,aboutText});
-    }
-  }catch(e){
-    console.error('Config error', e);
-  }
+function clearSession(){
+  localStorage.removeItem('mandoubSession');
 }
 
-/* ========== جلسة ========== */
-function getSession(){ try { return JSON.parse(localStorage.getItem('managerSession')||'null'); } catch { return null; } }
-function saveSession(obj){ try{ localStorage.setItem('managerSession', JSON.stringify(obj)); }catch{} }
-function clearSession(){ localStorage.removeItem('managerSession'); }
-
-function roleFlags(role){
-  const r = (role||'').trim();
-  const isTech   = (r==='المدير الفني');
-  const isExec   = (r==='المدير التنفيذي');
-  const isFollow = (r==='موظف المتابعة');
-  const isEntry  = (r==='موظف الإدخال');
-  return {isTech,isExec,isFollow,isEntry};
-}
-function canLoginRole(role){
-  const f=roleFlags(role);
-  return f.isTech || f.isExec || f.isFollow || f.isEntry;
-}
-
-/* ========== بناء القائمة حسب الصلاحية ========== */
-function buildNav(){
-  const ses=getSession(); if(!ses) return;
-  const f=roleFlags(ses.role);
-
-  const links = [
-    {page:'home', label:'🏠 الرئيسية'},
-    {page:'mandoubs', label:'👥 المندوبون'},
-    {page:'search', label:'🔎 البحث'},
-    {page:'archive', label:'📦 الأرشيف'},
-    {page:'notifications', label:'🔔 الإشعارات'},
-    {page:'addOrder', label:'➕ إضافة طلب'},
-    {page:'about', label:'ℹ️ حول التطبيق'}
-  ];
-
-  // قسم الإعدادات يظهر فقط للمدير الفني، فوق تسجيل الخروج
-  if(f.isTech){
-    links.push({page:'settings', label:'⚙️ الإعدادات'});
-  }
-
-  links.push({logout:true, label:'🚪 تسجيل الخروج'});
-
-  const nav = $('#navLinks');
-  nav.innerHTML = links.map(l=>{
-    if(l.logout) return `<a href="#" id="logoutBtn">${l.label}</a>`;
-    return `<a href="#" data-page="${l.page}">${l.label}</a>`;
-  }).join('');
-
-  // هاندلر
-  nav.querySelectorAll('a[data-page]').forEach(a=>{
-    a.onclick=(e)=>{
-      e.preventDefault();
-      sidebar.classList.remove('open');
-      overlay.classList.remove('show');
-      showPage(a.dataset.page);
-    };
-  });
-  const lo = $('#logoutBtn');
-  if(lo){
-    lo.onclick=(e)=>{
-      e.preventDefault();
-      Swal.fire({
-        title:'تأكيد الخروج',
-        text:'هل تريد تسجيل الخروج؟',
-        icon:'warning',showCancelButton:true,
-        confirmButtonText:'نعم',cancelButtonText:'لا'
-      }).then(r=>{
-        if(!r.isConfirmed) return;
-        clearSession(); location.reload();
-      });
-    };
-  }
-}
+let currentPage = 'home';
+let unsubOrders = null;
+let currentOrdersTab = 'pending';
 
 /* ========== القائمة الجانبية ========== */
 $('#openMenu').onclick = ()=>{
@@ -734,1179 +558,734 @@ overlay.onclick = ()=>{
   sidebar.classList.remove('open');
   overlay.classList.remove('show');
 };
+sidebar.querySelectorAll('a[data-page]').forEach(a=>{
+  a.onclick = (e)=>{
+    e.preventDefault();
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+    showPage(a.dataset.page);
+  };
+});
 
-/* ========== تسجيل الدخول (مصلّح) ========== */
-$('#doLogin').onclick = async ()=>{
+/* ========== تسجيل الدخول ========== */
+async function doLogin(){
   const u = $('#loginUser').value.trim().toLowerCase();
   const p = $('#loginPass').value.trim();
-  if(!u || !p) return showMsg('loginMsg','⚠️ أدخل اسم المستخدم وكلمة المرور','err');
+  if(!u||!p) return showMsg('loginMsg','⚠️ أدخل اسم المستخدم وكلمة المرور','err');
   showMsg('loginMsg','جارِ التحقق من بياناتك…','ok');
-
   try{
-    const qUser = query(collection(db,'users'), where('user','==',u));
-    const snap = await getDocs(qUser);
-
+    const qMand = query(collection(db,'mandoubs'),
+                        where('user','==',u),
+                        where('password','==',p));
+    const snap = await getDocs(qMand);
     if(snap.empty){
-      return showMsg('loginMsg','❌ اسم المستخدم غير موجود','err');
+      return showMsg('loginMsg','❌ بيانات الدخول غير صحيحة','err');
     }
-    const docu = snap.docs[0];
-    const d = docu.data();
-
-    if(String(d.password||'') !== p){
-      return showMsg('loginMsg','❌ كلمة المرور غير صحيحة','err');
-    }
+    const d = snap.docs[0].data();
     if(d.status === 'inactive'){
-      return showMsg('loginMsg','🚫 الحساب موقوف','err');
+      return showMsg('loginMsg','🚫 تم إيقاف حسابك من قبل الإدارة','err');
     }
-    if(!canLoginRole(d.role)){
-      return showMsg('loginMsg','🚫 هذا الدور لا يسمح بالدخول','err');
-    }
-
     const sess = {
-      id: docu.id,
-      user: d.user,
+      id: snap.docs[0].id,
       name: d.name || '',
-      role: d.role || '',
-      status: d.status || 'active'
+      phone: d.phone || '',
+      user: d.user || ''
     };
     saveSession(sess);
+    $('#loginScreen').style.display='none';
+    $('#app').style.display='block';
+    $('#welcomeText').textContent = `أهلاً كابتن ${sess.name||sess.user}`;
+    $('#sidebarUser').textContent = `${sess.name||sess.user} — كابتن توصيل`;
 
     Swal.fire({
       icon:'success',
-      title:`أهلًا ${d.name||d.user}`,
+      title:`مرحباً كابتن ${sess.name||sess.user}`,
       text:'تم تسجيل الدخول بنجاح',
-      timer:900,showConfirmButton:false
+      timer:1100,
+      showConfirmButton:false
     });
-    requireLogin();
+
+    showPage('home');
   }catch(e){
     showMsg('loginMsg','خطأ اتصال: '+e.message,'err');
   }
-};
+}
+$('#doLogin').onclick = doLogin;
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter' && $('#loginScreen').style.display!=='none'){
-    $('#doLogin').click();
+    doLogin();
   }
 });
 
-/* ========== مراقبة إيقاف الحساب ========== */
-let statusWatcher=null;
-function startStatusWatcher(){
-  if(statusWatcher) clearInterval(statusWatcher);
-  const ses=getSession(); if(!ses) return;
-  const check=async()=>{
-    try{
-      const ref=doc(db,'users',ses.id);
-      const dd=await getDoc(ref);
-      if(dd.exists() && dd.data().status==='inactive'){
-        clearSession();
-        Swal.fire('🚫 تم إيقاف الحساب','تم تسجيل خروجك بقرار إداري','warning')
-        .then(()=>location.reload());
-      }
-    }catch{}
-  };
-  check();
-  statusWatcher=setInterval(check,60000);
-}
+/* ========== تسجيل الخروج ========== */
+$('#logoutBtn').onclick = (e)=>{
+  e.preventDefault();
+  Swal.fire({
+    title:'تأكيد الخروج',
+    text:'هل تريد تسجيل الخروج من التطبيق؟',
+    icon:'warning',
+    showCancelButton:true,
+    confirmButtonText:'نعم',
+    cancelButtonText:'لا'
+  }).then(r=>{
+    if(!r.isConfirmed) return;
+    clearSession();
+    location.reload();
+  });
+};
 
-/* ========== requireLogin ========== */
-
-function requireLogin(){
-  const ses=getSession();
-  if(!ses){
-    document.getElementById('loginScreen').style.display='flex';
-    document.getElementById('app').style.display='none';
-  }else{
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('app').style.display='block';
-    document.getElementById('whoami').textContent = `${ses.name||ses.user} • ${ses.role||''}`;
-    document.getElementById('sidebarUser').textContent = `${ses.name||ses.user} — ${ses.role||''}`;
-    buildNav();
-    showPage('home');
-  }
-}
-else{
+/* ========== بدء التطبيق (استعادة جلسة) ========== */
+(function init(){
+  const ses = getSession();
+  if(ses){
     $('#loginScreen').style.display='none';
     $('#app').style.display='block';
-    $('#whoami').textContent = `${ses.name||ses.user} • ${ses.role||''}`;
-    $('#sidebarUser').textContent = `${ses.name||ses.user} — ${ses.role||''}`;
-    buildNav();
+    $('#welcomeText').textContent = `أهلاً كابتن ${ses.name||ses.user}`;
+    $('#sidebarUser').textContent = `${sess.name||sess.user} — كابتن توصيل`;
     showPage('home');
-    startStatusWatcher();
-  }
-}
-
-/* ========== صفحات ========== */
-async function showPage(p){
-  const ses=getSession();
-  if(!ses) return requireLogin();
-
-  if(p==='home') return renderHome();
-  if(p==='mandoubs') return renderMandoubs();
-  if(p==='search') return renderSearch();
-  if(p==='archive') return renderArchive();
-  if(p==='notifications') return renderNotifications();
-  if(p==='addOrder') return renderAddOrder();
-  if(p==='settings') return renderSettings();   // الإعدادات للمدير الفني فقط
-  if(p==='about') return renderAbout();
-}
-
-/* ========== الرئيسية ========== */
-async function renderHome(){
-  const mSnap=await getDocs(collection(db,'mandoubs'));
-  const mandoubs=[];
-  mSnap.forEach(d=>mandoubs.push({id:d.id,...d.data()}));
-
-  const oSnap=await getDocs(collection(db,'orders'));
-  const countsByMand={};
-  oSnap.forEach(d=>{
-    const o=d.data(); const mid=o.mandoubId; if(!mid) return;
-    if(!countsByMand[mid]) countsByMand[mid]={pending:0,delayed:0,delivered:0,rejected:0};
-    const s=o.status||'pending';
-    if(s==='pending') countsByMand[mid].pending++;
-    else if(s==='delayed') countsByMand[mid].delayed++;
-    else if(s==='delivered') countsByMand[mid].delivered++;
-    else if(s==='rejected') countsByMand[mid].rejected++;
-  });
-
-  let html=`
-    <div class="card" style="border-color:#fed7aa">
-      <h3 style="margin:4px 0;color:#ea580c">الرئيسية — ملخص الطلبات لكل مندوب</h3>
-      <p class="small-text">قيد التنفيذ / مؤجل / واصل / رفض لكل مندوب.</p>
-    </div>
-    <div class="orders">
-  `;
-  mandoubs.forEach(m=>{
-    const c=countsByMand[m.id]||{pending:0,delayed:0,delivered:0,rejected:0};
-    const total=c.pending+c.delayed+c.delivered+c.rejected;
-    html+=`
-      <div class="card" style="border-color:#fed7aa;background:#fff;color:#111">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div style="font-weight:800">🏍️ ${m.name||'-'}</div>
-          <div class="small-text">الإجمالي: <b>${fmtN(total)}</b></div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px">
-          <div style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:10px;padding:10px;text-align:center;font-weight:800">
-            قيد التنفيذ<br><span style="font-size:20px">${fmtN(c.pending)}</span>
-          </div>
-          <div style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a;border-radius:10px;padding:10px;text-align:center;font-weight:800">
-            مؤجل<br><span style="font-size:20px">${fmtN(c.delayed)}</span>
-          </div>
-          <div style="background:#dcfce7;color:#065f46;border:1px solid #bbf7d0;border-radius:10px;padding:10px;text-align:center;font-weight:800">
-            واصل<br><span style="font-size:20px">${fmtN(c.delivered)}</span>
-          </div>
-          <div style="background:#fee2e2;color:#7f1d1d;border:1px solid #fecaca;border-radius:10px;padding:10px;text-align:center;font-weight:800">
-            رفض<br><span style="font-size:20px">${fmtN(c.rejected)}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-  if(!mandoubs.length) html+=`<div class="card">لا توجد مندوبين حالياً.</div>`;
-  html+=`</div>`;
-  content.innerHTML=html;
-}
-
-/* ========== حول التطبيق ========== */
-function renderAbout(){
-  content.innerHTML=`
-    <div class="card" style="border-color:#fed7aa">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-        <img id="aboutLogoImg" src="" alt="شعار البغدادي" style="width:60px;height:60px;border-radius:16px;object-fit:cover;border:1px solid #f97316">
-        <div>
-          <h2 style="margin:6px 0;color:#ea580c">البغدادي للتوصيل السريع</h2>
-          <p class="small-text">نظام الإدارة المركزية لتتبع الطلبات والمندوبين.</p>
-        </div>
-      </div>
-      <p><b>📍 العنوان:</b> العراق – الأنبار – قضاء هيت – ناحية البغدادي – الشارع العام</p>
-      <p><b>🏢 من نحن:</b> ${aboutText}</p>
-      <p><b>🎯 هدف النظام:</b> متابعة المندوبين والطلبات والأرشفة والمحاسبة بربط مباشر مع تطبيق المندوب.</p>
-      <p><b>☎️ الأرقام:</b> 07810433473 — 07823789656</p>
-      <p><b>👨‍💻 برمجة وتطوير:</b> غفوري</p>
-    </div>
-  `;
-  applyBranding();
-}
-
-/* ========== المندوبون + صفحة المندوب ========== */
-async function renderMandoubs(){
-  const snap=await getDocs(collection(db,'mandoubs'));
-  let html=`
-    <div class="card" style="border-color:#fed7aa">
-      <h3 style="margin:4px 0;color:#ea580c">المندوبون</h3>
-      <p class="small-text">اضغط على اسم المندوب لعرض طلباته والمحاسبة.</p>
-    </div>
-    <div class="orders">
-  `;
-  if(snap.empty){
-    html+=`<div class="card">لا يوجد مندوبون.</div>`;
   }else{
-    snap.forEach(d=>{
-      const m=d.data();
-      html+=`
-        <div class="order-card" style="background:#fff;color:#111;border:1px solid var(--border)">
-          <p class="mname" data-id="${d.id}" data-name="${m.name||''}" style="font-weight:800;cursor:pointer">
-            🏍️ ${m.name||'-'}
-          </p>
-          <p class="small-text">هاتف: ${m.phone||'-'} — يوزر: ${m.user||'-'}</p>
-        </div>
-      `;
-    });
+    $('#loginScreen').style.display='flex';
+    $('#app').style.display='none';
   }
-  html+=`</div>`;
-  content.innerHTML=html;
-  document.querySelectorAll('.mname').forEach(el=>{
-    el.onclick=()=>renderMandoubPage(el.dataset.id, el.dataset.name);
-  });
-}
+})();
 
-/* نسخ رقم الوصل ضغط مطوّل */
-function attachWaslCopyHandlers(){
-  document.querySelectorAll('.wasl-copy[data-wasl]').forEach(el=>{
-    let pressTimer; const wasl=el.dataset.wasl||'';
-    const start=(e)=>{
-      e.preventDefault(); if(!wasl) return;
-      pressTimer=setTimeout(()=>{
-        navigator.clipboard.writeText(wasl).then(()=>{
-          toast.fire({icon:'success',title:'تم نسخ رقم الوصل'});
-        }).catch(()=>{});
-      },600);
-    };
-    const cancel=()=>clearTimeout(pressTimer);
-    el.addEventListener('mousedown',start);
-    el.addEventListener('touchstart',start);
-    el.addEventListener('mouseup',cancel);
-    el.addEventListener('mouseleave',cancel);
-    el.addEventListener('touchend',cancel);
-    el.addEventListener('touchcancel',cancel);
-  });
+/* ========== تبديل الصفحات ========== */
+async function showPage(p){
+  const ses = getSession();
+  if(!ses){
+    $('#loginScreen').style.display='flex';
+    $('#app').style.display='none';
+    return;
+  }
+  currentPage = p;
+  if(p==='home') return renderAccounts();
+  if(p==='orders') return renderOrders();
+  if(p==='search') return renderSearch();
+  if(p==='support') return renderSupport();
+  if(p==='notifications') return renderNotifications();
+  if(p==='about') return renderAbout();
+  if(p==='archive') return renderArchive();
 }
+window.showPage = showPage;
 
-async function renderMandoubPage(mandoubId, mandoubName){
-  content.innerHTML=`
-    <div class="card" style="border-color:#fed7aa">
-      <h3 style="margin:8px 0;color:#ea580c">المندوب: ${mandoubName}</h3>
-      <div id="finLine" class="small-text">...</div>
-      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <button class="btn" id="btnAccountingImg" style="flex:1;background:#4f46e5">📄 محاسبة المندوب (صورة)</button>
-        <button class="btn" id="btnArchive" style="flex:1;background:#16a34a">📦 ترحيل إلى الأرشيف</button>
-        <button class="btn" id="btnReset" style="flex:1;background:#dc2626">♻️ تصفير الملخص</button>
+/* ========== الصفحة: الحسابات (الرئيسية) ========== */
+async function renderAccounts(){
+  const ses = getSession();
+  const qDel = query(collection(db,'orders'),
+                     where('mandoubId','==',ses.id),
+                     where('status','==','delivered'));
+  const snap = await getDocs(qDel);
+  let total=0, count=0;
+  snap.forEach(d=>{
+    const o=d.data();
+    total += Number(o.amount||0);
+    count++;
+  });
+  const fees = count*1000;
+  const net = total - fees;
+
+  content.innerHTML = `
+    <div class="card card-dark">
+      <div class="section-header">
+        <h3>ملخص حسابات الكابتن</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
       </div>
+      <div class="stat-grid">
+        <div class="stat-box stat-total">
+          المبلغ الكلي
+          <span>${fmtN(total)} د.ع</span>
+        </div>
+        <div class="stat-box stat-fees">
+          أجور الكابتن
+          <span>${fmtN(fees)} د.ع</span>
+        </div>
+        <div class="stat-box stat-net">
+          المبلغ الصافي
+          <span>${fmtN(net)} د.ع</span>
+        </div>
+      </div>
+      <p class="muted">يعتمد هذا الملخص على جميع الطلبات التي حالتها <b>واصل</b> في النظام.</p>
+      <p class="thanks">شكراً كابتن ${ses.name||ses.user} على جهودك وتعبك اليومي ❤️</p>
     </div>
+  `;
+}
+
+/* ========== الصفحة: الطلبات (مع onSnapshot) ========== */
+async function renderOrders(){
+  const ses = getSession();
+  content.innerHTML = `
     <div class="card">
+      <div class="section-header">
+        <h3>قوائم الطلبات</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
       <div class="tabs" id="orderTabs">
-        <div class="tab active" data-k="pending">قيد التنفيذ <span class="pill-count" id="mc-pending">0</span></div>
-        <div class="tab" data-k="temp">مؤقت لاتخاذ القرار <span class="pill-count" id="mc-temp">0</span></div>
-        <div class="tab" data-k="delayed">المؤجل <span class="pill-count" id="mc-delayed">0</span></div>
-        <div class="tab" data-k="delivered">الواصل <span class="pill-count" id="mc-delivered">0</span></div>
-        <div class="tab" data-k="rejected">الرفض <span class="pill-count" id="mc-rejected">0</span></div>
+        <div class="tab active" data-k="pending">قيد التنفيذ <span class="pill-count" id="cnt-pending">0</span></div>
+        <div class="tab" data-k="delivered">الواصل <span class="pill-count" id="cnt-delivered">0</span></div>
+        <div class="tab" data-k="delayed">المؤجل <span class="pill-count" id="cnt-delayed">0</span></div>
+        <div class="tab" data-k="rejected">الرفض <span class="pill-count" id="cnt-rejected">0</span></div>
       </div>
       <div id="ordersWrap"></div>
     </div>
   `;
 
-  const mRef=doc(db,'mandoubs',mandoubId);
-  const mDoc=await getDoc(mRef);
-  let lastAccountingAt=mDoc.data()?.lastAccountingAt?.toDate?.()||null;
-  let lastResetAt=mDoc.data()?.lastResetAt?.toDate?.()||null;
+  const tabsEl  = document.getElementById('orderTabs');
+  const wrapEl  = document.getElementById('ordersWrap');
+  let   lists   = {pending:[], delivered:[], delayed:[], rejected:[]};
 
-  const q1=query(collection(db,'orders'), where('mandoubId','==',mandoubId));
-  onSnapshot(q1,(snap)=>{
-    let lists={pending:[],temp:[],delayed:[],delivered:[],rejected:[]};
-    let total=0;
-    snap.forEach(d=>{
-      const o=d.data(); o._id=d.id;
-      (lists[o.status||'pending']||lists.pending).push(o);
-      if(o.status==='delivered') total+=Number(o.amount||0);
-    });
-    const deliveredCount=lists.delivered.length;
-    const fees=deliveredCount*feePerOrder;
-    const net=total-fees;
-
-    $('#finLine').innerHTML=`
-      💰 الكلي: <b>${fmtN(total)}</b> • الأجور: <b>${fmtN(fees)}</b> • الصافي: <b>${fmtN(net)}</b>
-      ${lastAccountingAt?` • آخر محاسبة: ${lastAccountingAt.toLocaleDateString()} ${apm(lastAccountingAt)}`:''}
-      ${lastResetAt?` • آخر تصفير: ${lastResetAt.toLocaleDateString()} ${apm(lastResetAt)}`:''}
-    `;
-
-    ['pending','temp','delayed','delivered','rejected'].forEach(k=>{
-      const el=$('#mc-'+k); if(el) el.textContent=(lists[k]||[]).length;
-    });
-
-    function draw(kind){
-      const arr=lists[kind]||[];
-      if(!arr.length){ $('#ordersWrap').innerHTML=`<div class="card">لا توجد طلبات.</div>`; return; }
-      let html=`<div class="orders">`;
-      arr.forEach(o=>{
-        const cls = kind==='pending'?'pending':
-                    kind==='temp'?'temp':
-                    kind==='delayed'?'delayed':
-                    kind==='delivered'?'delivered':'rejected';
-        html+=`
-          <div class="order-card ${cls}">
-            <p>📦 <b>وصل:</b> <span class="wasl-copy" data-wasl="${o.wasl||''}">${o.wasl||'-'}</span></p>
-            <p>📱 ${o.phone||'-'} • 🏙️ ${o.gov||'-'} — ${o.area||'-'}</p>
-            <p>💵 ${fmtN(o.amount||0)} • الحالة: <b>${statusText(o.status)}</b></p>
-            ${o.managerNote ? `<p>📝 ملاحظة: ${o.managerNote}</p>` : ''}
-            ${o.reason ? `<p>📌 سبب: ${o.reason}${o.newAmount?` — سعر جديد: ${fmtN(o.newAmount)}`:''}</p>` : ''}
-            <div class="actions">
-              ${
-                kind==='pending'
-                ? `
-                  <button class="btnx btnx-green" onclick="setDelivered('${o._id}')">✅ واصل</button>
-                  <button class="btnx btnx-yellow" onclick="delayDirect('${o._id}')">⏳ مؤجل</button>
-                  <button class="btnx btnx-red" onclick="askReject('${o._id}')">❌ رفض</button>
-                  <button class="btnx btnx-gray" onclick="askNote('${o._id}')">📝 ملاحظة</button>
-                  <button class="btnx btnx-red" onclick="askDelete('${o._id}')">🗑️ حذف</button>
-                `
-                : kind==='delivered'
-                ? `
-                  <button class="btnx btnx-gray" onclick="backToPending('${o._id}')">↩️ إرجاعه قيد التنفيذ</button>
-                  <button class="btnx btnx-red" onclick="askDelete('${o._id}')">🗑️ حذف</button>
-                `
-                : kind==='delayed'
-                ? `
-                  <button class="btnx btnx-green" onclick="setDelivered('${o._id}')">✅ واصل</button>
-                  <button class="btnx btnx-red" onclick="askReject('${o._id}')">❌ رفض</button>
-                  <button class="btnx btnx-gray" onclick="backToPending('${o._id}')">↩️ قيد التنفيذ</button>
-                  <button class="btnx btnx-red" onclick="askDelete('${o._id}')">🗑️ حذف</button>
-                `
-                : kind==='rejected'
-                ? `
-                  <button class="btnx btnx-green" onclick="setDelivered('${o._id}')">✅ واصل</button>
-                  <button class="btnx btnx-yellow" onclick="delayDirect('${o._id}')">⏳ مؤجل</button>
-                  <button class="btnx btnx-gray" onclick="backToPending('${o._id}')">↩️ قيد التنفيذ</button>
-                  <button class="btnx btnx-red" onclick="askDelete('${o._id}')">🗑️ حذف</button>
-                `
-                : `
-                  <button class="btnx btnx-green" onclick="approveTemp('${o._id}')">✅ تطبيق القرار</button>
-                  <button class="btnx btnx-gray" onclick="backToPending('${o._id}')">↩️ قيد التنفيذ</button>
-                  <button class="btnx btnx-yellow" onclick="askNote('${o._id}')">📝 ملاحظة إضافية</button>
-                `
-              }
-            </div>
-            <p class="small-text" style="margin-top:6px">
-              📅 الإضافة: ${formatDateTime(o.createdAt)} • 🔁 التحديث: ${formatDateTime(o.lastUpdate)}
-            </p>
-          </div>
-        `;
-      });
-      html+=`</div>`;
-      $('#ordersWrap').innerHTML=html;
-      attachWaslCopyHandlers();
+  function draw(kind){
+    currentOrdersTab = kind;
+    const arr = lists[kind] || [];
+    if(!arr.length){
+      wrapEl.innerHTML = `<div class="card">لا توجد طلبات في هذه القائمة</div>`;
+      return;
     }
+    let html = `<div class="orders">`;
+    arr.forEach(o=>{
+      const created = o.createdAt?.toDate ? o.createdAt.toDate() : null;
+      const last    = o.lastUpdate?.toDate ? o.lastUpdate.toDate() : created;
+      let cls = 'pending';
+      if(o.status==='delivered') cls='delivered';
+      else if(o.status==='delayed') cls='delayed';
+      else if(o.status==='rejected' || o.status==='temp') cls='rejected';
 
-    document.querySelectorAll('#orderTabs .tab').forEach(t=>{
-      t.onclick=()=>{
-        document.querySelectorAll('#orderTabs .tab').forEach(x=>x.classList.remove('active'));
-        t.classList.add('active');
-        draw(t.dataset.k);
+      const safeWasl = (o.wasl||'').replace(/'/g,"&#39;");
+
+      html += `
+        <div class="order-card ${cls}">
+          <p>📦 الوصل:
+            <span class="wasl-copy" data-wasl="${o.wasl||''}">${o.wasl||'-'}</span>
+            <span class="badge-status">${statusText(o.status)}</span>
+          </p>
+          <p>👤 الشركة: ${o.company||'-'}</p>
+          <p>📱
+            <span class="cust-phone" data-phone="${o.phone||''}">${o.phone||'-'}</span>
+            • 🏙️ ${o.gov||'-'} — ${o.area||'-'}
+          </p>
+          <p>💵 المبلغ: <b>${fmtN(o.amount||0)} د.ع</b></p>
+          <p class="muted">⏱ أُضيف: ${fmtDate(created)} • آخر تحديث: ${fmtDate(last)}</p>
+          ${o.reason ? `<p>📌 سبب: ${o.reason}${o.newAmount ? ' — سعر جديد: '+fmtN(o.newAmount):''}</p>`:''}
+          <div class="actions">
+            ${
+              o.status==='pending'
+              ? `
+                <button class="btnx btnx-green" onclick="setDeliveredMandoub('${o._id}','${safeWasl}')">✅ واصل</button>
+                <button class="btnx btnx-yellow" onclick="setDelayedMandoub('${o._id}','${safeWasl}')">⏳ مؤجل</button>
+                <button class="btnx btnx-red" onclick="askRejectMandoub('${o._id}','${safeWasl}')">❌ رفض / تغير سعر</button>
+              `
+              : o.status==='delivered'
+              ? ``
+              : o.status==='delayed'
+              ? `
+                <button class="btnx btnx-green" onclick="setDeliveredMandoub('${o._id}','${safeWasl}')">✅ واصل</button>
+                <button class="btnx btnx-red" onclick="askRejectMandoub('${o._id}','${safeWasl}')">❌ رفض / تغير سعر</button>
+              `
+              : (o.status==='rejected' || o.status==='temp')
+              ? `
+                <button class="btnx btnx-green" onclick="setDeliveredMandoub('${o._id}','${safeWasl}')">✅ واصل</button>
+                <button class="btnx btnx-yellow" onclick="setDelayedMandoub('${o._id}','${safeWasl}')">⏳ مؤجل</button>
+              `
+              : ``
+            }
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+    wrapEl.innerHTML = html;
+
+    // نسخ رقم الوصل
+    document.querySelectorAll('.wasl-copy').forEach(el=>{
+      el.onclick = ()=>{
+        const w = (el.dataset.wasl||'').trim();
+        if(!w) return;
+        navigator.clipboard.writeText(w).then(()=>{
+          Swal.fire('تم','تم نسخ رقم الوصل','success');
+        }).catch(()=>{
+          Swal.fire('تم','تم نسخ رقم الوصل (جرّب لصق الرقم)','success');
+        });
       };
     });
-    draw('pending');
-  });
 
-  /* شاشة تقرير محاسبة صورة */
-  const appSection=document.getElementById('app');
-  const accWrapper=document.getElementById('accReportWrapper');
-  const accBackBtn=document.getElementById('accBackBtn');
-  const accDownloadBtn=document.getElementById('accDownloadBtn');
-
-  const showAccScreen=()=>{appSection.style.display='none';accWrapper.style.display='block';};
-  const hideAccScreen=()=>{accWrapper.style.display='none';appSection.style.display='block';};
-  accBackBtn.onclick=hideAccScreen;
-
-  accDownloadBtn.onclick=async()=>{
-    const node=document.getElementById('accReport');
-    const canvas=await html2canvas(node,{scale:2,backgroundColor:'#ffffff'});
-    const link=document.createElement('a');
-    link.download=`accounting_${mandoubName}.jpg`;
-    link.href=canvas.toDataURL('image/jpeg',1.0);
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
-  };
-
-  $('#btnAccountingImg').onclick=async()=>{
-    const ses=getSession();
-    const accountant=ses?.name||ses?.user||'مدير';
-    const q=query(collection(db,'orders'),where('mandoubId','==',mandoubId),where('status','==','delivered'));
-    const s=await getDocs(q);
-
-    const rows=[]; let total=0; let i=1;
-    s.forEach(d=>{
-      const o=d.data();
-      rows.push({idx:i++,wasl:o.wasl||'',company:o.company||'',gov:o.gov||'',area:o.area||'',amount:Number(o.amount||0)});
-      total+=Number(o.amount||0);
-    });
-    const fees=rows.length*feePerOrder;
-    const net=total-fees;
-
-    $('#bxTotal').textContent='المبلغ الكلي: '+fmtN(total);
-    $('#bxFees').textContent='الأجور: '+fmtN(fees);
-    $('#bxNet').textContent='الصافي: '+fmtN(net);
-    $('#bxOp').textContent='رقم العملية: '+randOp();
-    $('#bxDate').textContent='التاريخ: '+todayISO();
-    $('#bxCount').textContent='عدد الطلبات: '+rows.length;
-
-    const body=$('#accBody'); body.innerHTML='';
-    if(!rows.length){
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td colspan="7">لا توجد طلبات واصل</td>`;
-      body.appendChild(tr);
-    }else{
-      rows.forEach(r=>{
-        const tr=document.createElement('tr');
-        tr.innerHTML=`
-          <td>${r.idx}</td><td>${r.wasl}</td><td>${r.company}</td>
-          <td>${r.gov}</td><td>${r.area}</td>
-          <td>${fmtN(r.amount)}</td><td>${fmtN(r.amount-feePerOrder)}</td>
-        `;
-        body.appendChild(tr);
-      });
-    }
-
-    $('#accFooter').textContent=`اسم المندوب: ${mandoubName} — اسم المحاسب: ${accountant}`;
-    await updateDoc(mRef,{ lastAccountingAt:serverTimestamp() });
-    lastAccountingAt=new Date();
-    showAccScreen();
-  };
-
-  $('#btnArchive').onclick=async()=>{
-    const md=await getDoc(mRef);
-    const lastAcc=md.data()?.lastAccountingAt;
-    if(!lastAcc){
-      return Swal.fire('تنبيه','لا يمكن الترحيل قبل إجراء المحاسبة','warning');
-    }
-    const conf=await Swal.fire({
-      title:'ترحيل البيانات',
-      text:'سيتم ترحيل الواصل (نقل) والرفض (نسخة). متابعة؟',
-      icon:'warning',showCancelButton:true,confirmButtonText:'ترحيل'
-    });
-    if(!conf.isConfirmed) return;
-
-    const qDel=query(collection(db,'orders'),where('mandoubId','==',mandoubId),where('status','==','delivered'));
-    const sDel=await getDocs(qDel);
-    for(const d of sDel.docs){
-      const o=d.data();
-      await addDoc(collection(db,'archive'),{
-        ...o,archivedAt:serverTimestamp(),
-        archivedBy:(getSession()?.name||getSession()?.user||'مدير'),
-        mandoubId,mandoubName,archiveSource:'delivered',lastStatus:'delivered'
-      });
-      await deleteDoc(doc(db,'orders',d.id));
-    }
-
-    const qRej=query(collection(db,'orders'),where('mandoubId','==',mandoubId),where('status','==','rejected'));
-    const sRej=await getDocs(qRej);
-    for(const d of sRej.docs){
-      const o=d.data();
-      await addDoc(collection(db,'archive'),{
-        ...o,archivedAt:serverTimestamp(),
-        archivedBy:(getSession()?.name||getSession()?.user||'مدير'),
-        mandoubId,mandoubName,archiveSource:'rejected',lastStatus:'rejected'
-      });
-    }
-
-    await addDoc(collection(db,'notifications'),{
-      to: mandoubId,roleTarget:'mandoub',
-      title:'ترحيل البيانات',message:`تم ترحيل بياناتك إلى الأرشيف بعد المحاسبة.`,
-      at:serverTimestamp(),seen:false
-    });
-
-    Swal.fire('تم','اكتمل الترحيل بنجاح','success');
-  };
-
-  $('#btnReset').onclick=async()=>{
-    const r=await Swal.fire({
-      title:'تصفير الملخص',
-      text:'تأكيد تصفير ملخص هذا المندوب؟',
-      icon:'question',showCancelButton:true,confirmButtonText:'تصفير'
-    });
-    if(!r.isConfirmed) return;
-    await updateDoc(mRef,{ lastResetAt:serverTimestamp() });
-    Swal.fire('تم','تسجل وقت تصفير جديد','success');
-  };
-}
-
-/* ========== البحث ========== */
-async function renderSearch(){
-  content.innerHTML=`
-    <div class="card" style="border-color:#fed7aa">
-      <h3 style="margin:4px 0;color:#ea580c">البحث العام</h3>
-      <p class="small-text">بحث بالوصل/الهاتف/الشركة/اسم المندوب من الحالي والأرشيف.</p>
-      <div class="search-bar" style="margin-top:8px">
-        <input id="q" class="inp" style="height:52px;font-size:16px" placeholder="اكتب كلمة البحث">
-        <button class="btn" id="go" style="max-width:150px">بحث</button>
-      </div>
-      <div id="results" style="margin-top:10px"></div>
-    </div>
-  `;
-  $('#go').onclick=async()=>{
-    const key=$('#q').value.trim(); if(!key) return;
-    const all=[];
-    const oSnap=await getDocs(collection(db,'orders'));
-    const aSnap=await getDocs(collection(db,'archive'));
-    oSnap.forEach(d=>all.push({...d.data(),_id:d.id,_where:'current'}));
-    aSnap.forEach(d=>all.push({...d.data(),_id:d.id,_where:'archive'}));
-    const k=key.toLowerCase();
-    const res=all.filter(o=>
-      String(o.wasl||'').includes(key) ||
-      String(o.phone||'').includes(key) ||
-      String(o.company||'').toLowerCase().includes(k) ||
-      String(o.mandoubName||'').toLowerCase().includes(k)
-    );
-    if(!res.length){ $('#results').innerHTML=`<div class="card">لا توجد نتائج.</div>`; return; }
-    let html=`<div class="orders">`;
-    res.forEach(o=>{
-      const color=o._where==='archive'?'arch-card':
-        (o.status==='pending'?'pending':o.status==='temp'?'temp':o.status==='delayed'?'delayed':o.status==='delivered'?'delivered':'rejected');
-      html+=`
-        <div class="order-card ${color}">
-          <p>📦 <b>${o.wasl||'-'}</b> — ${o._where==='archive'?'أرشيف':'حالي'}</p>
-          <p>👤 ${o.mandoubName||'-'} — 🏢 ${o.company||'-'}</p>
-          <p>📱 ${o.phone||'-'} • 🏙️ ${o.gov||'-'} — ${o.area||'-'}</p>
-          <p>💵 ${fmtN(o.amount||0)} — الحالة: <b>${o._where==='archive'?(o.lastStatus||'-'):statusText(o.status)}</b></p>
-        </div>
-      `;
-    });
-    html+=`</div>`;
-    $('#results').innerHTML=html;
-  };
-}
-
-/* ========== الأرشيف ========== */
-async function renderArchive(){
-  const aSnap=await getDocs(collection(db,'archive'));
-  if(aSnap.empty){ content.innerHTML=`<div class="card">الأرشيف فارغ.</div>`; return; }
-  const arr=[]; aSnap.forEach(d=>arr.push(d.data()));
-  arr.sort((a,b)=>{
-    const da=a.createdAt?.toDate?a.createdAt.toDate().getTime():0;
-    const db=b.createdAt?.toDate?b.createdAt.toDate().getTime():0;
-    return da-db;
-  });
-
-  let html=`<div class="card" style="border-color:#fed7aa"><h3 style="margin:4px 0;color:#ea580c">الأرشيف العام</h3></div><div class="orders">`;
-  arr.forEach(o=>{
-    const dt=o.archivedAt?.toDate?o.archivedAt.toDate():null;
-    html+=`
-      <div class="order-card arch-card">
-        <p>📦 <b>الوصل:</b> ${o.wasl||'-'} • <b>الشركة:</b> ${o.company||'-'}</p>
-        <p>👤 ${o.mandoubName||'-'} • 📱 ${o.phone||'-'}</p>
-        <p>🏙️ ${o.gov||'-'} — ${o.area||'-'} • 💵 ${fmtN(o.amount||0)}</p>
-        <p>الحالة عند الأرشفة: <b>${o.lastStatus||'-'}</b></p>
-        <small>أُرشف بواسطة: ${o.archivedBy||'-'} • ${dt?dt.toLocaleDateString()+' '+apm(dt):''}</small>
-      </div>
-    `;
-  });
-  html+=`</div>`;
-  content.innerHTML=html;
-}
-
-/* ========== إضافة طلب ========== */
-async function renderAddOrder(){
-  const ms=await getDocs(collection(db,'mandoubs'));
-  let opts='';
-  ms.forEach(d=>{
-    const m=d.data();
-    opts+=`<option value="${d.id}" data-name="${m.name||''}">${m.name||'-'}</option>`;
-  });
-  content.innerHTML=`
-    <div class="card" style="border-color:#fed7aa">
-      <h3 style="margin:4px 0;color:#ea580c">إضافة طلب جديد</h3>
-      <select id="oM" class="inp">
-        <option value="">اختر المندوب</option>
-        ${opts}
-      </select>
-      <input id="oWasl" class="inp" placeholder="رقم الوصل">
-      <input id="oAmount" type="number" class="inp" placeholder="المبلغ (اكتب 5 وسيُسجل 5000)">
-      <div class="small-text" id="amountHint">القيمة المسجلة في النظام: 0</div>
-      <input id="oGov" class="inp" value="الأنبار" disabled>
-      <select id="oArea" class="inp">
-        <option value="">اختر المنطقة</option>
-        <option value="الدولاب">الدولاب</option>
-        <option value="حي سكني">حي سكني</option>
-        <option value="جبه">جبه</option>
-        <option value="شارع القدس">شارع القدس</option>
-        <option value="حي شهداء">حي شهداء</option>
-        <option value="جزيره">جزيره</option>
-        <option value="بغدادي شرقيه">بغدادي شرقيه</option>
-        <option value="قاعده">قاعده</option>
-        <option value="مؤسسه">مؤسسه</option>
-      </select>
-      <input id="oPhone" class="inp" placeholder="هاتف الزبون">
-      <input id="oCompany" class="inp" placeholder="الشركة">
-      <textarea id="oNotes" class="inp" placeholder="ملاحظات (اختياري)"></textarea>
-      <button class="btn" id="saveO">إضافة الطلب</button>
-    </div>
-  `;
-
-  // تحديث قيمة المبلغ أثناء الكتابة (5 => 5000)
-  const amountInput = $('#oAmount');
-  const amountHint = $('#amountHint');
-  const updateHint = ()=>{
-    const base = Number(amountInput.value || 0);
-    const real = base * AMOUNT_UNIT;
-    amountHint.textContent = 'القيمة المسجلة في النظام: ' + fmtN(real);
-  };
-  amountInput.addEventListener('input', updateHint);
-  updateHint();
-
-  $('#saveO').onclick=async()=>{
-    const ses=getSession(); if(!ses) return;
-    const wasl=$('#oWasl').value.trim();
-    const baseAmount=Number($('#oAmount').value||0);
-    const amount=baseAmount*AMOUNT_UNIT;
-    const mandoubId=$('#oM').value;
-    const mandoubName=$('#oM').selectedOptions[0]?.dataset.name||'';
-    const gov='الأنبار';
-    const area=$('#oArea').value;
-    const phone=$('#oPhone').value.trim();
-    const company=$('#oCompany').value.trim();
-    const notes=$('#oNotes').value.trim();
-    if(!wasl||!baseAmount||!mandoubId||!area||!phone||!company){
-      return Swal.fire('تنبيه','أدخل كل الحقول الإلزامية','warning');
-    }
-    const ref=await addDoc(collection(db,'orders'),{
-      wasl,amount,mandoubId,mandoubName,gov,area,phone,company,notes:notes||'',
-      status:'pending',createdAt:serverTimestamp(),lastUpdate:serverTimestamp()
-    });
-    await addDoc(collection(db,'notifications'),{
-      to:mandoubId,roleTarget:'mandoub',type:'new_order',
-      title:'طلب جديد',message:`تم إضافة طلب جديد برقم وصل #${wasl}`,
-      orderId:ref.id,by:(ses.name||ses.user),at:serverTimestamp(),seen:false
-    });
-    Swal.fire('تم','تمت إضافة الطلب','success');
-    ['oWasl','oAmount','oPhone','oCompany','oNotes'].forEach(id=>$('#'+id).value='');
-    $('#oArea').value='';
-    updateHint();
-  };
-}
-
-/* ========== الإعدادات (فقط المدير الفني) — مدموجة نهائياً مع الأدوار والمناطق ========== */
-
-async function renderSettings(){
-  const ses=getSession(); if(!ses) return requireLogin();
-  const {isTech}=roleFlags(ses.role);
-  if(!isTech){
-    content.innerHTML=`<div class="card">هذا القسم خاص بالمدير الفني فقط.</div>`;
-    return;
-  }
-
-  const usSnap=await getDocs(collection(db,'users'));
-  const mSnap=await getDocs(collection(db,'mandoubs'));
-
-  let html=`
-    <div class="card" style="border-color:#fed7aa">
-      <h3 style="margin:4px 0;color:#ea580c">إعدادات النظام العامة</h3>
-      <p class="small-text">تغيير الشعار، الوضع المظلم، نص حول التطبيق، وأجور المندوب.</p>
-      <label class="small-text">رابط الشعار</label>
-      <input id="cfgLogo" class="inp" placeholder="رابط صورة الشعار">
-      <div style="margin:6px 0">
-        <img id="cfgLogoPreview" src="" alt="معاينة الشعار" style="width:70px;height:70px;border-radius:16px;object-fit:cover;border:1px solid #f97316">
-      </div>
-      <label class="small-text">أجور المندوب لكل طلب واصل (دينار)</label>
-      <input id="cfgFee" type="number" class="inp" placeholder="مثال: 1000">
-      <label class="small-text">نص "من نحن" في قسم حول التطبيق</label>
-      <textarea id="cfgAbout" class="inp" rows="3"></textarea>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:8px">
-        <input type="checkbox" id="themeToggle"> تفعيل الوضع المظلم
-      </label>
-      <button class="btn" id="btnSaveConfig" style="margin-top:10px">💾 حفظ الإعدادات</button>
-    </div>
-    <div class="card" style="border-color:#fed7aa">
-      <h3 style="margin:4px 0;color:#ea580c">إدارة الموظفين</h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <button class="btn secondary" id="btnAddEmployee" style="flex:1">➕ إضافة موظف جديد</button>
-        <button class="btn secondary" id="btnAddMandoub" style="flex:1">🆕 إضافة مندوب جديد</button>
-      </div>
-    </div>
-  `;
-
-  /* الموظفون */
-  if(usSnap.empty){
-    html+=`<div class="card">لا يوجد موظفون.</div>`;
-  }else{
-    usSnap.forEach(d=>{
-      const u=d.data();
-      html+=`
-        <div class="order-card" style="background:#fff;color:#111;border:1px solid var(--border)">
-          <p><b>${u.name||u.user}</b> — <small>${u.role||''}</small></p>
-          <p class="small-text">يوزر: <b>${u.user||'-'}</b> • باسوورد: <b>${u.password||'-'}</b></p>
-          <div style="margin-top:8px">
-            <button class="btnx btnx-red" data-act="del" data-type="users" data-id="${d.id}">🗑️ حذف</button>
-            ${u.status==='inactive'
-              ? `<button class="btnx btnx-green" data-act="activate" data-type="users" data-id="${d.id}">🟢 تفعيل</button>`
-              : `<button class="btnx btnx-yellow" data-act="deactivate" data-type="users" data-id="${d.id}">🔴 إيقاف</button>`
-            }
-            <button class="btnx btnx-gray" data-act="resetpw" data-type="users" data-id="${d.id}">🔐 تغيير كلمة المرور</button>
-          </div>
-        </div>
-      `;
+    // منبثق الهاتف
+    document.querySelectorAll('.cust-phone[data-phone]').forEach(el=>{
+      el.onclick = ()=>{
+        const phone = (el.dataset.phone||'').trim();
+        if(!phone) return;
+        const intl = '964'+phone.replace(/^0/,'');
+        Swal.fire({
+          title:`خيارات الهاتف: ${phone}`,
+          html:`
+            <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px">
+              <a href="tel:${phone}" class="btnx btnx-green" style="text-decoration:none">📞 اتصال</a>
+              <a href="sms:${phone}" class="btnx btnx-yellow" style="text-decoration:none">✉️ SMS</a>
+              <a href="https://wa.me/${intl}" target="_blank" class="btnx" style="background:#25d366;color:#fff;text-decoration:none">💬 واتساب</a>
+              <button id="copyPhoneBtn" class="btnx btnx-red">📋 نسخ</button>
+            </div>
+          `,
+          showConfirmButton:false,
+          showCloseButton:true
+        });
+        setTimeout(()=>{
+          const b = document.getElementById('copyPhoneBtn');
+          if(b){
+            b.onclick = ()=>{
+              navigator.clipboard.writeText(phone).then(()=>{
+                Swal.fire('تم','تم نسخ رقم الهاتف','success');
+              });
+            };
+          }
+        },50);
+      };
     });
   }
 
-  html+=`
-    <div style="height:8px"></div>
-    <div class="card" style="border-color:#fed7aa"><h3 style="margin:4px 0;color:#ea580c">المندوبون</h3></div>
-  `;
-
-  if(mSnap.empty){
-    html+=`<div class="card">لا يوجد مندوبون.</div>`;
-  }else{
-    mSnap.forEach(d=>{
-      const m=d.data();
-      html+=`
-        <div class="order-card" style="background:#fff;color:#111;border:1px solid var(--border)">
-          <p><b>🏍️ ${m.name||'-'}</b> ${m.status==='inactive'?'(موقوف)':''}</p>
-          <p class="small-text">يوزر: <b>${m.user||'-'}</b> • باسوورد: <b>${m.password||'-'}</b></p>
-          <div style="margin-top:8px">
-            <button class="btnx btnx-red" data-act="del" data-type="mandoubs" data-id="${d.id}">🗑️ حذف</button>
-            ${m.status==='inactive'
-              ? `<button class="btnx btnx-green" data-act="activate" data-type="mandoubs" data-id="${d.id}">🟢 تفعيل</button>`
-              : `<button class="btnx btnx-yellow" data-act="deactivate" data-type="mandoubs" data-id="${d.id}">🔴 إيقاف</button>`
-            }
-            <button class="btnx btnx-gray" data-act="resetpw" data-type="mandoubs" data-id="${d.id}">🔐 تغيير كلمة المرور</button>
-          </div>
-        </div>
-      `;
+  function recalcFromSnapshot(snap){
+    lists = {pending:[], delivered:[], delayed:[], rejected:[]};
+    snap.forEach(d=>{
+      const o = d.data();
+      o._id = d.id;
+      const raw = o.status || 'pending';
+      const st  = (raw==='temp' ? 'rejected' : raw);
+      if     (st==='pending')   lists.pending.push(o);
+      else if(st==='delivered') lists.delivered.push(o);
+      else if(st==='delayed')   lists.delayed.push(o);
+      else if(st==='rejected')  lists.rejected.push(o);
+      else                      lists.pending.push(o);
     });
+    $('#cnt-pending').textContent   = lists.pending.length;
+    $('#cnt-delivered').textContent = lists.delivered.length;
+    $('#cnt-delayed').textContent   = lists.delayed.length;
+    $('#cnt-rejected').textContent  = lists.rejected.length;
+    draw(currentOrdersTab);
   }
 
-  content.innerHTML=html;
-
-  // تعبئة الإعدادات العامة
-  const logoInput = $('#cfgLogo');
-  const logoPreview = $('#cfgLogoPreview');
-  logoInput.value = logoUrl || '';
-  logoPreview.src = logoUrl || '';
-
-  logoInput.addEventListener('input', ()=>{
-    const v = logoInput.value.trim();
-    logoPreview.src = v || logoUrl;
-  });
-
-  $('#cfgFee').value = feePerOrder;
-  $('#cfgAbout').value = aboutText;
-  $('#themeToggle').checked = document.body.classList.contains('dark-mode');
-
-  $('#themeToggle').onchange = e=>{
-    setTheme(e.target.checked ? 'dark' : 'light');
-  };
-
-  $('#btnSaveConfig').onclick = async ()=>{
-    const newLogo = logoInput.value.trim() || logoUrl;
-    const newFee = Number($('#cfgFee').value||0) || feePerOrder;
-    const newAbout = $('#cfgAbout').value.trim() || aboutText;
-    logoUrl = newLogo;
-    feePerOrder = newFee;
-    aboutText = newAbout;
-    applyBranding();
-    try{
-      const cfgRef = doc(db,'config','global');
-      await setDoc(cfgRef,{
-        logoUrl:newLogo,
-        feePerOrder:newFee,
-        aboutText:newAbout
-      },{merge:true});
-      Swal.fire('تم','تم حفظ إعدادات النظام','success');
-    }catch(e){
-      Swal.fire('خطأ','تعذر حفظ الإعدادات: '+e.message,'error');
-    }
-  };
-
-  /* زر إضافة موظف */
-  $('#btnAddEmployee').onclick=async()=>{
-    const {value:form} = await Swal.fire({
-      title:'إضافة موظف جديد',
-      html:`
-        <input id="eName" class="swal2-input" placeholder="اسم الموظف">
-        <input id="eUser" class="swal2-input" placeholder="يوزر الدخول">
-        <input id="ePass" class="swal2-input" placeholder="كلمة المرور">
-        <select id="eRole" class="swal2-select" style="width:80%;padding:10px;border-radius:8px">
-          <option value="المدير الفني">المدير الفني</option>
-          <option value="المدير التنفيذي">المدير التنفيذي</option>
-          <option value="موظف المتابعة">موظف المتابعة</option>
-          <option value="موظف الإدخال">موظف الإدخال</option>
-        </select>
-      `,
-      focusConfirm:false,
-      preConfirm:()=>{
-        const name=document.getElementById('eName').value.trim();
-        const user=document.getElementById('eUser').value.trim().toLowerCase();
-        const pass=document.getElementById('ePass').value.trim();
-        const role=document.getElementById('eRole').value;
-        if(!name||!user||!pass) return Swal.showValidationMessage('أدخل جميع الحقول');
-        return {name,user,pass,role};
-      },
-      showCancelButton:true,
-      confirmButtonText:'حفظ'
-    });
-    if(!form) return;
-    await addDoc(collection(db,'users'),{
-      name:form.name,user:form.user,password:form.pass,role:form.role,status:'active'
-    });
-    Swal.fire('تم','إضافة الموظف بنجاح','success');
-    renderSettings();
-  };
-
-  /* زر إضافة مندوب */
-  $('#btnAddMandoub').onclick=async()=>{
-    const {value:form} = await Swal.fire({
-      title:'إضافة مندوب جديد',
-      html:`
-        <input id="mNameX" class="swal2-input" placeholder="اسم المندوب">
-        <input id="mPhoneX" class="swal2-input" placeholder="الهاتف">
-        <input id="mUserX" class="swal2-input" placeholder="يوزر الدخول">
-        <input id="mPassX" class="swal2-input" placeholder="كلمة المرور">
-      `,
-      focusConfirm:false,
-      preConfirm:()=>{
-        const name=document.getElementById('mNameX').value.trim();
-        const phone=document.getElementById('mPhoneX').value.trim();
-        const user=document.getElementById('mUserX').value.trim().toLowerCase();
-        const pass=document.getElementById('mPassX').value.trim();
-        if(!name||!phone||!user||!pass) return Swal.showValidationMessage('أدخل جميع الحقول');
-        return {name,phone,user,pass};
-      },
-      showCancelButton:true,
-      confirmButtonText:'حفظ'
-    });
-    if(!form) return;
-    await addDoc(collection(db,'mandoubs'),{
-      name:form.name,phone:form.phone,user:form.user,password:form.pass,status:'active'
-    });
-    await addDoc(collection(db,'users'),{
-      name:form.name,user:form.user,password:form.pass,role:'مندوب',status:'active'
-    });
-    Swal.fire('تم','إضافة المندوب بنجاح','success');
-    renderSettings();
-  };
-
-  /* أزرار التحكم (حذف/تفعيل/تعطيل/كلمة مرور) */
-  content.querySelectorAll('[data-act]').forEach(btn=>{
-    btn.onclick=async()=>{
-      const act=btn.dataset.act;
-      const type=btn.dataset.type;
-      const id=btn.dataset.id;
-
-      if(act==='del'){
-        const r=await Swal.fire({title:'حذف نهائي؟',text:'سيتم حذف الحساب نهائياً.',icon:'warning',showCancelButton:true,confirmButtonText:'حذف'});
-        if(!r.isConfirmed) return;
-        await deleteDoc(doc(db,type,id));
-        Swal.fire('تم','تم الحذف','success');
-        return renderSettings();
-      }
-
-      if(act==='deactivate'){
-        await updateDoc(doc(db,type,id),{status:'inactive'});
-        Swal.fire('تم','تم إيقاف الحساب','success');
-        return renderSettings();
-      }
-
-      if(act==='activate'){
-        await updateDoc(doc(db,type,id),{status:'active'});
-        Swal.fire('تم','تم تفعيل الحساب','success');
-        return renderSettings();
-      }
-
-      if(act==='resetpw'){
-        const {value:newpw}=await Swal.fire({title:'كلمة مرور جديدة',input:'text',showCancelButton:true});
-        if(!newpw) return;
-        await updateDoc(doc(db,type,id),{password:newpw});
-        Swal.fire('تم','تم تغيير كلمة المرور','success');
-        return renderSettings();
-      }
+  // tabs events
+  tabsEl.querySelectorAll('.tab').forEach(t=>{
+    t.onclick = ()=>{
+      tabsEl.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      draw(t.dataset.k);
     };
   });
-}
 
-/* ========== الإشعارات ========== */
-let unsubNotifs=null;
-function renderNotifications(){
-  content.innerHTML=`
-    <div class="card" style="border-color:#fed7aa">
-      <h3 style="margin:4px 0;color:#ea580c">الإشعارات</h3>
-      <div id="notifList"></div>
-    </div>
-  `;
-  if(unsubNotifs) unsubNotifs();
-  unsubNotifs=onSnapshot(query(collection(db,'notifications'),orderBy('at','desc')),(snap)=>{
-    let html='';
-    snap.docChanges().forEach(ch=>{ if(ch.type==='added'){ try{beep.currentTime=0;beep.play();}catch{} } });
-    snap.forEach(d=>{
-      const n=d.data();
-      const dd=n.at?.toDate?n.at.toDate():null;
-      const when=dd?`${dd.getDate()}/${dd.getMonth()+1}/${dd.getFullYear()} • ${apm(dd)}`:'-';
-      html+=`
-        <div class="card" style="border-color:#fed7aa">
-          <b>🔔 ${n.title||'تنبيه'}</b><br>
-          ${n.message||''}<br>
-          <small class="small-text">${n.by||'-'} • ${when}</small>
-        </div>
-      `;
-    });
-    $('#notifList').innerHTML=html||'لا توجد إشعارات.';
+  // الاشتراك الفوري مع فايرستور
+  if(unsubOrders) unsubOrders();
+  const qAll = query(collection(db,'orders'),
+                     where('mandoubId','==',ses.id));
+  unsubOrders = onSnapshot(qAll,snap=>{
+    recalcFromSnapshot(snap);
   });
 }
 
-/* ========== عمليات الطلب (عامة) ========== */
-window.setDelivered=async(id)=>{
-  const ses=getSession();
-  await updateDoc(doc(db,'orders',id),{status:'delivered',deliveredAt:serverTimestamp(),lastUpdate:serverTimestamp()});
+/* ========== عمليات المندوب على الطلبات ========== */
+window.setDeliveredMandoub = async (id,wasl)=>{
+  const ses = getSession();
+  await updateDoc(doc(db,'orders',id),{
+    status:'delivered',
+    deliveredAt:serverTimestamp(),
+    lastUpdate:serverTimestamp()
+  });
   await addDoc(collection(db,'notifications'),{
-    type:'order_update',title:'تم التحديث: واصل',message:`طلب #${id} أصبح واصل`,
-    orderId:id,roleTarget:'mandoub+manager',by:(ses?.name||ses?.user||'مدير'),at:serverTimestamp(),seen:false
+    to:'managers',
+    roleTarget:'manager',
+    type:'order_update',
+    title:'تحديث: واصل',
+    message:`الكابتن ${ses.name||ses.user} حدّث الطلب #${wasl||id} إلى واصل`,
+    orderId:id,
+    by:(ses.name||ses.user),
+    at:serverTimestamp(),
+    seen:false
   });
-  Swal.fire('تم','نُقل إلى الواصل','success');
+  Swal.fire('تم','تم تحويل الطلب إلى واصل. شكراً كابتن '+(ses.name||ses.user),'success');
+  renderAccounts();
 };
-window.delayDirect=async(id)=>{
-  await updateDoc(doc(db,'orders',id),{status:'delayed',lastUpdate:serverTimestamp()});
-  Swal.fire('تم','نُقل إلى المؤجل','success');
+
+window.setDelayedMandoub = async (id,wasl)=>{
+  const ses = getSession();
+  await updateDoc(doc(db,'orders',id),{
+    status:'delayed',
+    lastUpdate:serverTimestamp()
+  });
+  await addDoc(collection(db,'notifications'),{
+    to:'managers',
+    roleTarget:'manager',
+    type:'order_update',
+    title:'تحديث: مؤجل',
+    message:`الكابتن ${ses.name||ses.user} حدّث الطلب #${wasl||id} إلى مؤجل`,
+    orderId:id,
+    by:(ses.name||ses.user),
+    at:serverTimestamp(),
+    seen:false
+  });
+  Swal.fire('تم','تم نقل الطلب إلى المؤجل','success');
 };
-window.askReject=async(id)=>{
-  const {value:reason}=await Swal.fire({
-    title:'سبب الرفض',input:'select',
+
+window.askRejectMandoub = async (id,wasl)=>{
+  const {value:reason} = await Swal.fire({
+    title:'سبب الرفض / تغيير السعر',
+    input:'select',
     inputOptions:{
-      'لا يرد':'لا يرد','لايرد بعد الاتفاق':'لايرد بعد الاتفاق','مغلق':'مغلق',
-      'مغلق بعد الاتفاق':'مغلق بعد الاتفاق','رفض اختلاف الطلب':'رفض اختلاف الطلب',
-      'رفض اختلاف القياس':'رفض اختلاف القياس','رفض اختلاف اللون':'رفض اختلاف اللون',
-      'الغاء الطلب':'الغاء الطلب','تغير سعر':'تغير سعر'
+      'لا يرد':'لا يرد',
+      'لايرد بعد الاتفاق':'لايرد بعد الاتفاق',
+      'مغلق':'مغلق',
+      'مغلق بعد الاتفاق':'مغلق بعد الاتفاق',
+      'رفض اختلاف الطلب':'رفض اختلاف الطلب',
+      'رفض اختلاف القياس':'رفض اختلاف القياس',
+      'رفض اختلاف اللون':'رفض اختلاف اللون',
+      'الغاء الطلب':'الغاء الطلب',
+      'تغير سعر':'تغير سعر'
     },
-    inputPlaceholder:'اختر السبب',showCancelButton:true
+    inputPlaceholder:'اختر السبب',
+    showCancelButton:true
   });
   if(!reason) return;
 
-  const ref=doc(db,'orders',id);
-  const snap=await getDoc(ref);
-  if(!snap.exists()) return Swal.fire('خطأ','الطلب غير موجود','error');
-  const o=snap.data(); const oldAmount=Number(o.amount||0);
+  const ref  = doc(db,'orders',id);
+  const snap = await getDoc(ref);
+  if(!snap.exists()){
+    Swal.fire('خطأ','الطلب غير موجود في النظام','error');
+    return;
+  }
+  const o          = snap.data();
+  const oldAmount  = Number(o.amount||0);
+  const ses        = getSession();
+  let baseNote     = '';
+  let extraNote    = '';
 
-  let updates={status:'temp',tempType:'reject',reason,lastUpdate:serverTimestamp()};
-  if(reason==='تغير سعر'){
-    const {value:newPriceStr}=await Swal.fire({title:'السعر الجديد',input:'number',inputAttributes:{min:0},showCancelButton:true});
+  if(reason === 'تغير سعر'){
+    const {value:newPriceStr} = await Swal.fire({
+      title:'السعر الجديد',
+      input:'number',
+      inputAttributes:{min:0},
+      showCancelButton:true
+    });
     if(!newPriceStr) return;
-    const newPrice=Number(newPriceStr);
-    if(!newPrice||newPrice<=0) return Swal.fire('تنبيه','سعر غير صالح','warning');
-    const {isConfirmed:hasReturn}=await Swal.fire({
-      title:'هل يوجد راجع؟',icon:'question',showCancelButton:true,confirmButtonText:'نعم',cancelButtonText:'لا'
+    const newPrice = Number(newPriceStr);
+    if(!newPrice || newPrice<=0){
+      Swal.fire('تنبيه','يجب إدخال سعر جديد صالح','warning');
+      return;
+    }
+
+    const {isConfirmed:hasReturn} = await Swal.fire({
+      title:'هل يوجد راجع؟',
+      icon:'question',
+      showCancelButton:true,
+      confirmButtonText:'نعم',
+      cancelButtonText:'لا'
     });
-    updates.newAmount=newPrice;
-    updates.managerNote = hasReturn
-      ? `تغيير السعر من ${fmtN(oldAmount)} إلى ${fmtN(newPrice)} مع وجود راجع`
-      : `تغيير السعر من ${fmtN(oldAmount)} إلى ${fmtN(newPrice)} بدون راجع`;
+    if(hasReturn === undefined) return;
+
+    const diff = Math.abs(oldAmount - newPrice);
+    baseNote   = `تغيير السعر من ${fmtN(oldAmount)} إلى ${fmtN(newPrice)} ` + (hasReturn ? 'مع وجود راجع' : 'بدون راجع');
+
+    const {value:note} = await Swal.fire({
+      title:'ملاحظة إضافية (اختياري)',
+      input:'text',
+      showCancelButton:true
+    });
+    if(note) extraNote = note;
+    const finalNote = baseNote + (extraNote ? ' — '+extraNote : '');
+
+    if(hasReturn){
+      // 1) الطلب الأصلي يصبح واصل بالسعر الجديد
+      await updateDoc(ref,{
+        status:'delivered',
+        amount:newPrice,
+        reason:'تغير سعر',
+        managerNote:finalNote,
+        oldAmount:oldAmount,
+        newAmount:newPrice,
+        lastUpdate:serverTimestamp()
+      });
+
+      // 2) طلب جديد مرفوض بقيمة فرق السعر
+      if(diff>0){
+        await addDoc(collection(db,'orders'),{
+          ...o,
+          amount:diff,
+          status:'rejected',
+          reason:'تغير سعر - فرق السعر',
+          managerNote:finalNote,
+          originalAmount:oldAmount,
+          newAmount:newPrice,
+          parentId:id,
+          createdAt:o.createdAt || serverTimestamp(),
+          lastUpdate:serverTimestamp()
+        });
+      }
+
+      await addDoc(collection(db,'notifications'),{
+        to:'managers',
+        roleTarget:'manager',
+        type:'order_update',
+        title:'تغيير سعر مع راجع',
+        message:`الكابتن ${ses.name||ses.user} عدّل الطلب #${wasl||id} إلى سعر جديد مع وجود راجع.`,
+        orderId:id,
+        by:(ses.name||ses.user),
+        at:serverTimestamp(),
+        seen:false
+      });
+    }else{
+      // بدون راجع → نسخة واحدة واصل بالسعر الجديد
+      await updateDoc(ref,{
+        status:'delivered',
+        amount:newPrice,
+        reason:'تغير سعر',
+        managerNote:finalNote,
+        oldAmount:oldAmount,
+        newAmount:newPrice,
+        lastUpdate:serverTimestamp()
+      });
+
+      await addDoc(collection(db,'notifications'),{
+        to:'managers',
+        roleTarget:'manager',
+        type:'order_update',
+        title:'تغيير سعر بدون راجع',
+        message:`الكابتن ${ses.name||ses.user} عدّل الطلب #${wasl||id} إلى سعر جديد بدون راجع.`,
+        orderId:id,
+        by:(ses.name||ses.user),
+        at:serverTimestamp(),
+        seen:false
+      });
+    }
+
+    Swal.fire('تم','تم تطبيق تغيير السعر بنجاح','success');
+    renderAccounts();
+    return;
+  }else{
+    // رفض عادي بدون تغيير سعر
+    const {value:note} = await Swal.fire({
+      title:'ملاحظة إضافية (اختياري)',
+      input:'text',
+      showCancelButton:true
+    });
+    const finalNote = note || '';
+
+    await updateDoc(ref,{
+      status:'rejected',
+      reason,
+      managerNote: finalNote || null,
+      lastUpdate:serverTimestamp()
+    });
+
+    await addDoc(collection(db,'notifications'),{
+      to:'managers',
+      roleTarget:'manager',
+      type:'order_update',
+      title:'تحديث: رفض',
+      message:`الكابتن ${ses.name||ses.user} حدّث الطلب #${wasl||id} إلى حالة رفض (${reason})`,
+      orderId:id,
+      by:(ses.name||ses.user),
+      at:serverTimestamp(),
+      seen:false
+    });
+
+    Swal.fire('تم','تم تحويل الطلب إلى قائمة الرفض','success');
   }
-
-  const {value:note}=await Swal.fire({title:'ملاحظة إضافية',input:'text',showCancelButton:true});
-  if(note) updates.managerNote=(updates.managerNote?updates.managerNote+' — ':'')+note;
-
-  await updateDoc(ref,updates);
-  Swal.fire('تم','أُرسل إلى مؤقت لاتخاذ القرار','success');
-};
-window.backToPending=async(id)=>{
-  await updateDoc(doc(db,'orders',id),{status:'pending',lastUpdate:serverTimestamp()});
-  Swal.fire('تم','رجع لقيد التنفيذ','success');
-};
-window.askNote=async(id)=>{
-  const {value:note}=await Swal.fire({title:'ملاحظة',input:'text',showCancelButton:true});
-  if(note){
-    await updateDoc(doc(db,'orders',id),{managerNote:note,lastUpdate:serverTimestamp()});
-    Swal.fire('تم','تم حفظ الملاحظة','success');
-  }
-};
-window.askDelete=async(id)=>{
-  const r=await Swal.fire({title:'حذف الطلب؟',text:'سيُحذف نهائياً.',icon:'warning',showCancelButton:true,confirmButtonText:'حذف'});
-  if(!r.isConfirmed) return;
-  await deleteDoc(doc(db,'orders',id));
-  Swal.fire('تم','تم الحذف','success');
-};
-window.approveTemp=async(id)=>{
-  const d=await getDoc(doc(db,'orders',id)); if(!d.exists()) return;
-  const o=d.data();
-  if(o.tempType==='reject') await updateDoc(doc(db,'orders',id),{status:'rejected',lastUpdate:serverTimestamp()});
-  if(o.tempType==='delayed') await updateDoc(doc(db,'orders',id),{status:'delayed',lastUpdate:serverTimestamp()});
-  Swal.fire('تم','تم تطبيق القرار','success');
 };
 
-/* ========== تشغيل أولي ========== */
-async function init(){
-  await loadConfig();
-  applyBranding();
-  applyTheme();
-  requireLogin();
-}
-init();
-
-/* ================== SETTINGS FULL MODULE (FINAL) ================== */
-/*
-يشمل:
-- شعار تطبيق المدير
-- شعار تطبيق المندوب
-- إدارة الموظفين
-- إدارة المندوبين
-- إدارة الأدوار + صلاحيات
-- إدارة المناطق
-*/
-
-async function renderSettings(){
-  const ses = getSession();
-  if(!ses) return requireLogin();
-  if(!roleFlags(ses.role).isTech){
-    return Swal.fire('🚫 ممنوع','الإعدادات للمدير الفني فقط','warning');
-  }
-
+/* ========== الصفحة: البحث ========== */
+async function renderSearch(){
   content.innerHTML = `
-  <div class="card"><h3>⚙️ الإعدادات الكاملة</h3></div>
-
-  <div class="card">
-    <h4>🖼️ شعار تطبيق المدير</h4>
-    <input id="logoManager" class="inp" value="${logoUrl}">
-    <button class="btn" id="saveLogoManager">حفظ</button>
-  </div>
-
-  <div class="card">
-    <h4>🖼️ شعار تطبيق المندوب</h4>
-    <input id="logoMandoub" class="inp" placeholder="رابط شعار المندوب">
-    <button class="btn" id="saveLogoMandoub">حفظ</button>
-  </div>
-
-  <div class="card">
-    <h4>👥 إدارة الموظفين</h4>
-    <button class="btn" id="addEmp">➕ إضافة موظف</button>
-    <div id="empList"></div>
-  </div>
-
-  <div class="card">
-    <h4>🏍️ إدارة المندوبين</h4>
-    <button class="btn" id="addMand">➕ إضافة مندوب</button>
-    <div id="mandList"></div>
-  </div>
-
-  <div class="card">
-    <h4>🔐 إضافة دور جديد</h4>
-    <input id="roleName" class="inp" placeholder="اسم الدور">
-    <label><input type="checkbox" value="orders"> الطلبات</label>
-    <label><input type="checkbox" value="settings"> الإعدادات</label>
-    <label><input type="checkbox" value="accounts"> الحسابات</label>
-    <label><input type="checkbox" value="addOrders"> إضافة طلبات</label>
-    <button class="btn" id="saveRole">حفظ الدور</button>
-  </div>
-
-  <div class="card">
-    <h4>📍 إضافة منطقة جديدة</h4>
-    <input id="newArea" class="inp" placeholder="اسم المنطقة">
-    <button class="btn" id="saveArea">حفظ المنطقة</button>
-    <div id="areaList"></div>
-  </div>
+    <div class="card">
+      <div class="section-header">
+        <h3>البحث عن طلب</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <div class="search-bar">
+        <input id="searchKey" class="inp" placeholder="رقم الوصل / الهاتف / الشركة">
+        <button class="btn" id="searchBtn" style="max-width:150px;">بحث</button>
+      </div>
+      <div id="searchRes" style="margin-top:10px;"></div>
+    </div>
   `;
-
-  /* شعار المدير */
-  document.getElementById('saveLogoManager').onclick = async()=>{
-    const v=document.getElementById('logoManager').value.trim();
-    if(!v) return;
-    await setDoc(doc(db,'config','global'),{logoUrl:v},{merge:true});
-    logoUrl=v; applyBranding();
-    Swal.fire('تم','تم حفظ شعار المدير','success');
-  };
-
-  /* شعار المندوب */
-  document.getElementById('saveLogoMandoub').onclick = async()=>{
-    const v=document.getElementById('logoMandoub').value.trim();
-    if(!v) return;
-    await setDoc(doc(db,'config','mandoub'),{logoUrl:v},{merge:true});
-    Swal.fire('تم','تم حفظ شعار المندوب','success');
-  };
-
-  /* الموظفين */
-  const empSnap = await getDocs(collection(db,'users'));
-  let eh='';
-  empSnap.forEach(d=>{
-    const u=d.data();
-    eh+=`<div class="small-text">👤 ${u.name||'-'} — ${u.role||''}</div>`;
+  $('#searchBtn').onclick = doSearch;
+  $('#searchKey').addEventListener('keydown',e=>{
+    if(e.key==='Enter') doSearch();
   });
-  document.getElementById('empList').innerHTML=eh||'لا يوجد';
 
-  document.getElementById('addEmp').onclick=async()=>{
-    const {value:form}=await Swal.fire({
-      title:'إضافة موظف',
-      html:`
-        <input id="e1" class="swal2-input" placeholder="الاسم">
-        <input id="e2" class="swal2-input" placeholder="الهاتف">
-        <input id="e3" class="swal2-input" placeholder="يوزر">
-        <input id="e4" type="password" class="swal2-input" placeholder="باسورد">
-        <input id="e5" class="swal2-input" placeholder="الدور">
-      `,
-      preConfirm:()=>({
-        name:document.getElementById('e1').value,
-        phone:document.getElementById('e2').value,
-        user:document.getElementById('e3').value,
-        password:document.getElementById('e4').value,
-        role:document.getElementById('e5').value
-      })
+  async function doSearch(){
+    const ses = getSession();
+    const key = $('#searchKey').value.trim();
+    if(!key) return;
+    const all = [];
+    const qOrders = query(collection(db,'orders'), where('mandoubId','==',ses.id));
+    const qArch   = query(collection(db,'archive'), where('mandoubId','==',ses.id));
+    const s1 = await getDocs(qOrders);
+    const s2 = await getDocs(qArch);
+    s1.forEach(d=> all.push({...d.data(), _id:d.id, _where:'current'}));
+    s2.forEach(d=> all.push({...d.data(), _id:d.id, _where:'archive'}));
+
+    const k = key.toLowerCase();
+    const res = all.filter(o=>
+      String(o.wasl||'').includes(key) ||
+      String(o.phone||'').includes(key) ||
+      String(o.company||'').toLowerCase().includes(k)
+    );
+    if(!res.length){
+      $('#searchRes').innerHTML = `<div class="card">لا توجد نتائج مطابقة</div>`;
+      return;
+    }
+    let html = `<div class="orders">`;
+    res.forEach(o=>{
+      const cls = o._where==='archive' ? 'arch-card' : 'pending';
+      const created = o.createdAt?.toDate ? o.createdAt.toDate() : null;
+      html += `
+        <div class="order-card ${cls}">
+          <p>📦 الوصل: <b>${o.wasl||'-'}</b> — ${o._where==='archive'?'أرشيف':'حالي'}</p>
+          <p>👤 الشركة: ${o.company||'-'}</p>
+          <p>📱 ${o.phone||'-'} • 🏙️ ${o.gov||'-'} — ${o.area||'-'}</p>
+          <p>💵 المبلغ: ${fmtN(o.amount||0)} د.ع</p>
+          <p class="muted">الحالة: ${statusText(o.status||o.lastStatus||'-')} • أُضيف: ${fmtDate(created)}</p>
+        </div>
+      `;
     });
-    if(!form) return;
-    await addDoc(collection(db,'users'),{...form,status:'active'});
-    Swal.fire('تم','تم إضافة الموظف','success');
-    renderSettings();
-  };
-
-  /* المندوبين */
-  const mSnap = await getDocs(collection(db,'mandoubs'));
-  let mh='';
-  mSnap.forEach(d=>{
-    const m=d.data();
-    mh+=`<div class="small-text">🏍️ ${m.name||'-'} — ${m.area||''}</div>`;
-  });
-  document.getElementById('mandList').innerHTML=mh||'لا يوجد';
-
-  document.getElementById('addMand').onclick=async()=>{
-    const {value:form}=await Swal.fire({
-      title:'إضافة مندوب',
-      html:`
-        <input id="m1" class="swal2-input" placeholder="الاسم">
-        <input id="m2" class="swal2-input" placeholder="الهاتف">
-        <input id="m3" class="swal2-input" placeholder="يوزر">
-        <input id="m4" type="password" class="swal2-input" placeholder="باسورد">
-        <input id="m5" class="swal2-input" placeholder="المنطقة">
-      `,
-      preConfirm:()=>({
-        name:document.getElementById('m1').value,
-        phone:document.getElementById('m2').value,
-        user:document.getElementById('m3').value,
-        password:document.getElementById('m4').value,
-        area:document.getElementById('m5').value
-      })
-    });
-    if(!form) return;
-    await addDoc(collection(db,'mandoubs'),form);
-    Swal.fire('تم','تم إضافة المندوب','success');
-    renderSettings();
-  };
-
-  /* الأدوار */
-  document.getElementById('saveRole').onclick=async()=>{
-    const name=document.getElementById('roleName').value.trim();
-    const checks=[...document.querySelectorAll('input[type=checkbox]:checked')];
-    if(!name||!checks.length) return Swal.fire('تنبيه','حدد صلاحية واحدة على الأقل','warning');
-    const data={};
-    checks.forEach(c=>data[c.value]=true);
-    await setDoc(doc(db,'roles',name),data);
-    Swal.fire('تم','تم حفظ الدور','success');
-  };
-
-  /* المناطق */
-  const areaSnap = await getDocs(collection(db,'areas'));
-  let ah='';
-  areaSnap.forEach(d=>ah+=`<div class="small-text">📍 ${d.data().name}</div>`);
-  document.getElementById('areaList').innerHTML=ah||'لا يوجد';
-
-  document.getElementById('saveArea').onclick=async()=>{
-    const v=document.getElementById('newArea').value.trim();
-    if(!v) return;
-    await addDoc(collection(db,'areas'),{name:v});
-    Swal.fire('تم','تمت إضافة المنطقة','success');
-    renderSettings();
-  };
+    html += `</div>`;
+    $('#searchRes').innerHTML = html;
+  }
 }
-/* ================== END SETTINGS FULL ================== */
 
+/* ========== الصفحة: الأرشيف ========== */
+async function renderArchive(){
+  const ses = getSession();
+  const qArch = query(collection(db,'archive'),
+                      where('mandoubId','==',ses.id));
+  const snap = await getDocs(qArch);
+
+  if(snap.empty){
+    content.innerHTML = `
+      <div class="card">
+        <div class="section-header">
+          <h3>الأرشيف</h3>
+          <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+        </div>
+        لا توجد طلبات مؤرشفة حتى الآن.
+      </div>
+    `;
+    return;
+  }
+  const arr = [];
+  snap.forEach(d=>arr.push(d.data()));
+  // ترتيب حسب تاريخ الطلب القديم ثم الحديث
+  arr.sort((a,b)=>{
+    const da = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+    const db = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+    return da-db;
+  });
+
+  let html = `
+    <div class="card">
+      <div class="section-header">
+        <h3>الأرشيف</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <div class="orders">
+  `;
+  arr.forEach(o=>{
+    const dt = o.archivedAt?.toDate ? o.archivedAt.toDate() : null;
+    html += `
+      <div class="order-card arch-card">
+        <p>📦 الوصل: <b>${o.wasl||'-'}</b> • الشركة: ${o.company||'-'}</p>
+        <p>📱 ${o.phone||'-'} • 🏙️ ${o.gov||'-'} — ${o.area||'-'}</p>
+        <p>💵 المبلغ: ${fmtN(o.amount||0)} د.ع</p>
+        <p class="muted">الحالة عند الأرشفة: ${statusText(o.lastStatus||o.status||'-')}</p>
+        <p class="muted">أُرشف في: ${fmtDate(dt)}</p>
+      </div>
+    `;
+  });
+  html += `</div></div>`;
+  content.innerHTML = html;
+}
+
+/* ========== الصفحة: الدعم ========== */
+function renderSupport(){
+  content.innerHTML = `
+    <div class="card">
+      <div class="section-header">
+        <h3>الدعم والمساندة</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <p class="muted">لأي مشكلة في الطلبات أو التطبيق راسل الإدارة مباشرة:</p>
+
+      <div class="support-row">
+        <div>غفار — <b>07810433473</b></div>
+        <div class="support-btns">
+          <a href="tel:07810433473" class="support-btn" style="background:#16a34a;color:#f9fafb;text-decoration:none;">📞 اتصال</a>
+          <a href="https://wa.me/9647810433473" target="_blank" class="support-btn" style="background:#25d366;color:#f9fafb;text-decoration:none;">💬 واتساب</a>
+        </div>
+      </div>
+
+      <div class="support-row">
+        <div>ابراهيم — <b>07823789656</b></div>
+        <div class="support-btns">
+          <a href="tel:07823789656" class="support-btn" style="background:#16a34a;color:#f9fafb;text-decoration:none;">📞 اتصال</a>
+          <a href="https://wa.me/9647823789656" target="_blank" class="support-btn" style="background:#25d366;color:#f9fafb;text-decoration:none;">💬 واتساب</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ========== الصفحة: الإشعارات ========== */
+let unsubNotifs = null;
+function renderNotifications(){
+  content.innerHTML = `
+    <div class="card">
+      <div class="section-header">
+        <h3>الإشعارات</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <div id="notifList"></div>
+    </div>
+  `;
+  const ses = getSession();
+  if(unsubNotifs) unsubNotifs();
+  const qNot = query(
+    collection(db,'notifications'),
+    where('to','==',ses.id),
+    orderBy('at','desc')
+  );
+  unsubNotifs = onSnapshot(qNot,snap=>{
+    let html='';
+    snap.docChanges().forEach(ch=>{
+      if(ch.type==='added'){
+        try{beep.currentTime=0; beep.play();}catch{}
+      }
+    });
+    snap.forEach(d=>{
+      const n = d.data();
+      const dt = n.at?.toDate ? n.at.toDate() : null;
+      html += `
+        <div class="card" style="border-color:#c4b5fd;background:#eef2ff;">
+          <b>🔔 ${n.title||'تنبيه'}</b><br>
+          ${n.message||''}<br>
+          <span class="muted">${n.by||'-'} • ${fmtDate(dt)}</span>
+        </div>
+      `;
+    });
+    $('#notifList').innerHTML = html || 'لا توجد إشعارات حتى الآن';
+  });
+}
+
+/* ========== الصفحة: حول التطبيق ========== */
+function renderAbout(){
+  content.innerHTML = `
+    <div class="card">
+      <div class="section-header">
+        <h3>حول التطبيق</h3>
+        <button class="back-btn" onclick="showPage('home')">↩ الرئيسية</button>
+      </div>
+      <p><b>🚚 البغدادي للتوصيل السريع</b></p>
+      <p><b>📍 العنوان:</b> العراق – الأنبار – قضاء هيت – ناحية البغدادي – الشارع العام</p>
+      <p><b>🏢 عن الشركة:</b> شركة متخصّصة بنقل بضائع الشركات وتوصيلها من وإلى محافظة الأنبار، تعمل على مدار 24 ساعة لتخدم الشركات والزبائن بأعلى سرعة وجودة.</p>
+      <p><b>🎯 هدفنا:</b> توفير خدمة توصيل آمنة، سريعة، ومنظمة للمندوبين والشركات عبر نظام إداري متكامل.</p>
+      <p><b>☎️ أرقام الشركة:</b> 07810433473 — 07823789656</p>
+      <p><b>👨‍💻 برمجة وتطوير:</b> المبرمج <b>غفوري</b></p>
+    </div>
+  `;
+}
 </script>
 </body>
 </html>
