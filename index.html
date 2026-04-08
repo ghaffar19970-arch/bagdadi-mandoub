@@ -1,4 +1,4 @@
-<!DOCTYPE html>تطبيق المندوب
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8" />
@@ -11,7 +11,7 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&display=swap');
   :root{
-    --brand:#7c3aed;          /* بنفسجي */
+    --brand:#7c3aed;
     --brand-50:#f5f3ff;
     --brand-600:#5b21b6;
     --dark:#0f172a;
@@ -42,7 +42,6 @@
     user-select:text;
   }
 
-  /* شاشة الدخول */
   #loginScreen{
     min-height:100vh;
     display:flex;
@@ -79,8 +78,7 @@
     font-weight:800;
     letter-spacing:2px;
     color:#f9fafb;
-    text-shadow:0 0 10px rgba(129,140,248,.9),
-                0 0 20px rgba(79,70,229,.8);
+    text-shadow:0 0 10px rgba(129,140,248,.9),0 0 20px rgba(79,70,229,.8);
   }
   .logo-sub{
     font-size:14px;
@@ -145,7 +143,6 @@
   .ok{color:#22c55e;}
   .err{color:#f97316;}
 
-  /* التطبيق */
   #app{display:none;min-height:100vh;}
 
   header{
@@ -186,7 +183,6 @@
     color:#e5e7eb;
   }
 
-  /* القائمة الجانبية */
   .sidebar{
     position:fixed;
     inset:0 0 0 auto;
@@ -232,7 +228,6 @@
   }
   .overlay.show{display:block;}
 
-  /* المحتوى */
   .content{
     padding:12px;
   }
@@ -295,7 +290,6 @@
     color:#4b5563;
   }
 
-  /* Tabs للطلبات */
   .tabs{
     display:flex;
     gap:8px;
@@ -350,6 +344,7 @@
   .cust-phone{
     text-decoration:underline;
     cursor:pointer;
+    font-weight:bold;
   }
 
   .badge-status{
@@ -378,21 +373,18 @@
   .btnx-yellow{background:#facc15;color:#422006;}
   .btnx-red{background:#ef4444;color:#fef2f2;}
 
-  /* بحث */
   .search-bar{
     display:flex;
     gap:8px;
   }
   .search-bar input{flex:1;}
 
-  /* الأرشيف */
   .arch-card{
     background:#e5e7eb;
     color:#111827;
     border:1px solid #cbd5f5;
   }
 
-  /* الدعم */
   .support-row{
     display:flex;
     justify-content:space-between;
@@ -418,7 +410,6 @@
     font-weight:600;
   }
 
-  /* الإشعارات */
   audio{display:none;}
 
   @media (min-width:768px){
@@ -428,7 +419,6 @@
 </head>
 <body>
 
-<!-- شاشة الدخول -->
 <section id="loginScreen">
   <div class="login-card">
     <div class="logo-text">
@@ -445,7 +435,6 @@
   </div>
 </section>
 
-<!-- التطبيق -->
 <section id="app">
   <header>
     <button id="openMenu" class="menu-btn">☰</button>
@@ -455,7 +444,6 @@
     </div>
   </header>
 
-  <!-- القائمة الجانبية -->
   <aside id="sidebar" class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-title">القائمة الرئيسية</div>
@@ -477,12 +465,12 @@
   <main class="content" id="content"></main>
 </section>
 
-<!-- تنبيه صوتي للإشعارات -->
 <audio id="beep" preload="auto" src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQAAACAA"></audio>
+<audio id="notificationSound" preload="auto">
+  <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" type="audio/mpeg">
+</audio>
 
-<!-- Firebase + منطق التطبيق -->
 <script type="module">
-/* ========== Firebase ========== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
   getFirestore, collection, query, where, getDocs, getDoc,
@@ -500,12 +488,12 @@ const firebaseConfig = {
 const appFB = initializeApp(firebaseConfig);
 const db = getFirestore(appFB);
 
-/* ========== Helpers ========== */
 const $ = s => document.querySelector(s);
 const content = $('#content');
 const overlay = $('#overlay');
 const sidebar = $('#sidebar');
 const beep = $('#beep');
+const notificationSound = $('#notificationSound');
 
 const fmtN = n => Number(n||0).toLocaleString('en-US');
 
@@ -534,7 +522,15 @@ function statusText(s){
          s || '-';
 }
 
-/* ========== جلسة الكابتن ========== */
+function playNotificationSound(){
+  try{
+    const audio = new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3');
+    audio.volume = 0.5;
+    audio.play().catch(e=>console.log('Audio play failed:',e));
+  }catch(e){}
+  try{ beep.currentTime=0; beep.play(); }catch(e){}
+}
+
 function getSession(){
   try{return JSON.parse(localStorage.getItem('mandoubSession')||'null');}catch{return null;}
 }
@@ -548,8 +544,8 @@ function clearSession(){
 let currentPage = 'home';
 let unsubOrders = null;
 let currentOrdersTab = 'pending';
+let unsubNotifs = null;
 
-/* ========== القائمة الجانبية ========== */
 $('#openMenu').onclick = ()=>{
   sidebar.classList.add('open');
   overlay.classList.add('show');
@@ -567,7 +563,6 @@ sidebar.querySelectorAll('a[data-page]').forEach(a=>{
   };
 });
 
-/* ========== تسجيل الدخول ========== */
 async function doLogin(){
   const u = $('#loginUser').value.trim().toLowerCase();
   const p = $('#loginPass').value.trim();
@@ -617,7 +612,6 @@ document.addEventListener('keydown',e=>{
   }
 });
 
-/* ========== تسجيل الخروج ========== */
 $('#logoutBtn').onclick = (e)=>{
   e.preventDefault();
   Swal.fire({
@@ -634,14 +628,13 @@ $('#logoutBtn').onclick = (e)=>{
   });
 };
 
-/* ========== بدء التطبيق (استعادة جلسة) ========== */
 (function init(){
   const ses = getSession();
   if(ses){
     $('#loginScreen').style.display='none';
     $('#app').style.display='block';
     $('#welcomeText').textContent = `أهلاً كابتن ${ses.name||ses.user}`;
-    $('#sidebarUser').textContent = `${sess.name||sess.user} — كابتن توصيل`;
+    $('#sidebarUser').textContent = `${ses.name||ses.user} — كابتن توصيل`;
     showPage('home');
   }else{
     $('#loginScreen').style.display='flex';
@@ -649,7 +642,6 @@ $('#logoutBtn').onclick = (e)=>{
   }
 })();
 
-/* ========== تبديل الصفحات ========== */
 async function showPage(p){
   const ses = getSession();
   if(!ses){
@@ -668,7 +660,6 @@ async function showPage(p){
 }
 window.showPage = showPage;
 
-/* ========== الصفحة: الحسابات (الرئيسية) ========== */
 async function renderAccounts(){
   const ses = getSession();
   const qDel = query(collection(db,'orders'),
@@ -710,7 +701,6 @@ async function renderAccounts(){
   `;
 }
 
-/* ========== الصفحة: الطلبات (مع onSnapshot) ========== */
 async function renderOrders(){
   const ses = getSession();
   content.innerHTML = `
@@ -750,18 +740,16 @@ async function renderOrders(){
       else if(o.status==='rejected' || o.status==='temp') cls='rejected';
 
       const safeWasl = (o.wasl||'').replace(/'/g,"&#39;");
+      const customerPhone = o.customerPhone || o.phone || 'لا يوجد';
 
       html += `
         <div class="order-card ${cls}">
-          <p>📦 الوصل:
-            <span class="wasl-copy" data-wasl="${o.wasl||''}">${o.wasl||'-'}</span>
+          <p>📦 الوصل: <span class="wasl-copy" data-wasl="${o.wasl||''}">${o.wasl||'-'}</span>
             <span class="badge-status">${statusText(o.status)}</span>
           </p>
           <p>👤 الشركة: ${o.company||'-'}</p>
-          <p>📱
-            <span class="cust-phone" data-phone="${o.phone||''}">${o.phone||'-'}</span>
-            • 🏙️ ${o.gov||'-'} — ${o.area||'-'}
-          </p>
+          <p>📞 الزبون: <span class="cust-phone" data-phone="${customerPhone}">${customerPhone}</span></p>
+          <p>📍 ${o.gov||'-'} — ${o.area||'-'}</p>
           <p>💵 المبلغ: <b>${fmtN(o.amount||0)} د.ع</b></p>
           <p class="muted">⏱ أُضيف: ${fmtDate(created)} • آخر تحديث: ${fmtDate(last)}</p>
           ${o.reason ? `<p>📌 سبب: ${o.reason}${o.newAmount ? ' — سعر جديد: '+fmtN(o.newAmount):''}</p>`:''}
@@ -794,7 +782,6 @@ async function renderOrders(){
     html += `</div>`;
     wrapEl.innerHTML = html;
 
-    // نسخ رقم الوصل
     document.querySelectorAll('.wasl-copy').forEach(el=>{
       el.onclick = ()=>{
         const w = (el.dataset.wasl||'').trim();
@@ -802,12 +789,11 @@ async function renderOrders(){
         navigator.clipboard.writeText(w).then(()=>{
           Swal.fire('تم','تم نسخ رقم الوصل','success');
         }).catch(()=>{
-          Swal.fire('تم','تم نسخ رقم الوصل (جرّب لصق الرقم)','success');
+          Swal.fire('تم','تم نسخ رقم الوصل','success');
         });
       };
     });
 
-    // منبثق الهاتف
     document.querySelectorAll('.cust-phone[data-phone]').forEach(el=>{
       el.onclick = ()=>{
         const phone = (el.dataset.phone||'').trim();
@@ -845,13 +831,14 @@ async function renderOrders(){
     snap.forEach(d=>{
       const o = d.data();
       o._id = d.id;
-      const raw = o.status || 'pending';
-      const st  = (raw==='temp' ? 'rejected' : raw);
-      if     (st==='pending')   lists.pending.push(o);
-      else if(st==='delivered') lists.delivered.push(o);
-      else if(st==='delayed')   lists.delayed.push(o);
-      else if(st==='rejected')  lists.rejected.push(o);
-      else                      lists.pending.push(o);
+      const status = o.status || 'pending';
+      if(status === 'deleted' || status === 'archived') return;
+      
+      if(status === 'pending') lists.pending.push(o);
+      else if(status === 'delivered') lists.delivered.push(o);
+      else if(status === 'delayed') lists.delayed.push(o);
+      else if(status === 'rejected' || status === 'temp') lists.rejected.push(o);
+      else if(status !== 'deleted' && status !== 'archived') lists.pending.push(o);
     });
     $('#cnt-pending').textContent   = lists.pending.length;
     $('#cnt-delivered').textContent = lists.delivered.length;
@@ -860,7 +847,6 @@ async function renderOrders(){
     draw(currentOrdersTab);
   }
 
-  // tabs events
   tabsEl.querySelectorAll('.tab').forEach(t=>{
     t.onclick = ()=>{
       tabsEl.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
@@ -869,7 +855,6 @@ async function renderOrders(){
     };
   });
 
-  // الاشتراك الفوري مع فايرستور
   if(unsubOrders) unsubOrders();
   const qAll = query(collection(db,'orders'),
                      where('mandoubId','==',ses.id));
@@ -878,7 +863,6 @@ async function renderOrders(){
   });
 }
 
-/* ========== عمليات المندوب على الطلبات ========== */
 window.setDeliveredMandoub = async (id,wasl)=>{
   const ses = getSession();
   await updateDoc(doc(db,'orders',id),{
@@ -988,7 +972,6 @@ window.askRejectMandoub = async (id,wasl)=>{
     const finalNote = baseNote + (extraNote ? ' — '+extraNote : '');
 
     if(hasReturn){
-      // 1) الطلب الأصلي يصبح واصل بالسعر الجديد
       await updateDoc(ref,{
         status:'delivered',
         amount:newPrice,
@@ -999,7 +982,6 @@ window.askRejectMandoub = async (id,wasl)=>{
         lastUpdate:serverTimestamp()
       });
 
-      // 2) طلب جديد مرفوض بقيمة فرق السعر
       if(diff>0){
         await addDoc(collection(db,'orders'),{
           ...o,
@@ -1027,7 +1009,6 @@ window.askRejectMandoub = async (id,wasl)=>{
         seen:false
       });
     }else{
-      // بدون راجع → نسخة واحدة واصل بالسعر الجديد
       await updateDoc(ref,{
         status:'delivered',
         amount:newPrice,
@@ -1055,7 +1036,6 @@ window.askRejectMandoub = async (id,wasl)=>{
     renderAccounts();
     return;
   }else{
-    // رفض عادي بدون تغيير سعر
     const {value:note} = await Swal.fire({
       title:'ملاحظة إضافية (اختياري)',
       input:'text',
@@ -1086,7 +1066,6 @@ window.askRejectMandoub = async (id,wasl)=>{
   }
 };
 
-/* ========== الصفحة: البحث ========== */
 async function renderSearch(){
   content.innerHTML = `
     <div class="card">
@@ -1121,7 +1100,7 @@ async function renderSearch(){
     const k = key.toLowerCase();
     const res = all.filter(o=>
       String(o.wasl||'').includes(key) ||
-      String(o.phone||'').includes(key) ||
+      String(o.customerPhone||o.phone||'').includes(key) ||
       String(o.company||'').toLowerCase().includes(k)
     );
     if(!res.length){
@@ -1132,11 +1111,13 @@ async function renderSearch(){
     res.forEach(o=>{
       const cls = o._where==='archive' ? 'arch-card' : 'pending';
       const created = o.createdAt?.toDate ? o.createdAt.toDate() : null;
+      const customerPhone = o.customerPhone || o.phone || '-';
       html += `
         <div class="order-card ${cls}">
           <p>📦 الوصل: <b>${o.wasl||'-'}</b> — ${o._where==='archive'?'أرشيف':'حالي'}</p>
           <p>👤 الشركة: ${o.company||'-'}</p>
-          <p>📱 ${o.phone||'-'} • 🏙️ ${o.gov||'-'} — ${o.area||'-'}</p>
+          <p>📞 الزبون: ${customerPhone}</p>
+          <p>📍 ${o.gov||'-'} — ${o.area||'-'}</p>
           <p>💵 المبلغ: ${fmtN(o.amount||0)} د.ع</p>
           <p class="muted">الحالة: ${statusText(o.status||o.lastStatus||'-')} • أُضيف: ${fmtDate(created)}</p>
         </div>
@@ -1147,7 +1128,6 @@ async function renderSearch(){
   }
 }
 
-/* ========== الصفحة: الأرشيف ========== */
 async function renderArchive(){
   const ses = getSession();
   const qArch = query(collection(db,'archive'),
@@ -1168,7 +1148,6 @@ async function renderArchive(){
   }
   const arr = [];
   snap.forEach(d=>arr.push(d.data()));
-  // ترتيب حسب تاريخ الطلب القديم ثم الحديث
   arr.sort((a,b)=>{
     const da = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
     const db = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
@@ -1185,10 +1164,12 @@ async function renderArchive(){
   `;
   arr.forEach(o=>{
     const dt = o.archivedAt?.toDate ? o.archivedAt.toDate() : null;
+    const customerPhone = o.customerPhone || o.phone || '-';
     html += `
       <div class="order-card arch-card">
         <p>📦 الوصل: <b>${o.wasl||'-'}</b> • الشركة: ${o.company||'-'}</p>
-        <p>📱 ${o.phone||'-'} • 🏙️ ${o.gov||'-'} — ${o.area||'-'}</p>
+        <p>📞 الزبون: ${customerPhone}</p>
+        <p>📍 ${o.gov||'-'} — ${o.area||'-'}</p>
         <p>💵 المبلغ: ${fmtN(o.amount||0)} د.ع</p>
         <p class="muted">الحالة عند الأرشفة: ${statusText(o.lastStatus||o.status||'-')}</p>
         <p class="muted">أُرشف في: ${fmtDate(dt)}</p>
@@ -1199,7 +1180,6 @@ async function renderArchive(){
   content.innerHTML = html;
 }
 
-/* ========== الصفحة: الدعم ========== */
 function renderSupport(){
   content.innerHTML = `
     <div class="card">
@@ -1228,8 +1208,6 @@ function renderSupport(){
   `;
 }
 
-/* ========== الصفحة: الإشعارات ========== */
-let unsubNotifs = null;
 function renderNotifications(){
   content.innerHTML = `
     <div class="card">
@@ -1251,7 +1229,17 @@ function renderNotifications(){
     let html='';
     snap.docChanges().forEach(ch=>{
       if(ch.type==='added'){
-        try{beep.currentTime=0; beep.play();}catch{}
+        playNotificationSound();
+        const n = ch.doc.data();
+        Swal.fire({
+          icon: 'info',
+          title: n.title || 'إشعار جديد',
+          text: n.message || '',
+          toast: true,
+          position: 'top',
+          showConfirmButton: false,
+          timer: 4000
+        });
       }
     });
     snap.forEach(d=>{
@@ -1269,7 +1257,6 @@ function renderNotifications(){
   });
 }
 
-/* ========== الصفحة: حول التطبيق ========== */
 function renderAbout(){
   content.innerHTML = `
     <div class="card">
