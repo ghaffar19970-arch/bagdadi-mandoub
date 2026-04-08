@@ -474,7 +474,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
   getFirestore, collection, query, where, getDocs, getDoc,
-  addDoc, updateDoc, doc, onSnapshot, serverTimestamp, orderBy
+  addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, orderBy
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -905,164 +905,184 @@ window.setDelayedMandoub = async (id,wasl)=>{
   Swal.fire('تم','تم نقل الطلب إلى المؤجل','success');
 };
 
-window.askRejectMandoub = async (id,wasl)=>{
-  const {value:reason} = await Swal.fire({
-    title:'سبب الرفض / تغيير السعر',
-    input:'select',
-    inputOptions:{
-      'لا يرد':'لا يرد',
-      'لايرد بعد الاتفاق':'لايرد بعد الاتفاق',
-      'مغلق':'مغلق',
-      'مغلق بعد الاتفاق':'مغلق بعد الاتفاق',
-      'رفض اختلاف الطلب':'رفض اختلاف الطلب',
-      'رفض اختلاف القياس':'رفض اختلاف القياس',
-      'رفض اختلاف اللون':'رفض اختلاف اللون',
-      'الغاء الطلب':'الغاء الطلب',
-      'تغير سعر':'تغير سعر'
+window.askRejectMandoub = async (id, wasl) => {
+  const { value: reason } = await Swal.fire({
+    title: 'سبب الرفض / تغيير السعر',
+    input: 'select',
+    inputOptions: {
+      'لا يرد': 'لا يرد',
+      'لايرد بعد الاتفاق': 'لايرد بعد الاتفاق',
+      'مغلق': 'مغلق',
+      'مغلق بعد الاتفاق': 'مغلق بعد الاتفاق',
+      'رفض اختلاف الطلب': 'رفض اختلاف الطلب',
+      'رفض اختلاف القياس': 'رفض اختلاف القياس',
+      'رفض اختلاف اللون': 'رفض اختلاف اللون',
+      'الغاء الطلب': 'الغاء الطلب',
+      'تغير سعر': 'تغير سعر'
     },
-    inputPlaceholder:'اختر السبب',
-    showCancelButton:true
+    inputPlaceholder: 'اختر السبب',
+    showCancelButton: true
   });
-  if(!reason) return;
+  if (!reason) return;
 
-  const ref  = doc(db,'orders',id);
+  const ref = doc(db, 'orders', id);
   const snap = await getDoc(ref);
-  if(!snap.exists()){
-    Swal.fire('خطأ','الطلب غير موجود في النظام','error');
+  if (!snap.exists()) {
+    Swal.fire('خطأ', 'الطلب غير موجود في النظام', 'error');
     return;
   }
-  const o          = snap.data();
-  const oldAmount  = Number(o.amount||0);
-  const ses        = getSession();
-  let baseNote     = '';
-  let extraNote    = '';
+  const o = snap.data();
+  const oldAmount = Number(o.amount || 0);
+  const ses = getSession();
 
-  if(reason === 'تغير سعر'){
-    const {value:newPriceStr} = await Swal.fire({
-      title:'السعر الجديد',
-      input:'number',
-      inputAttributes:{min:0},
-      showCancelButton:true
+  if (reason === 'تغير سعر') {
+    // 1. طلب السعر الجديد
+    const { value: newPriceStr } = await Swal.fire({
+      title: 'السعر الجديد',
+      input: 'number',
+      inputAttributes: { min: 0 },
+      inputPlaceholder: 'أدخل السعر الجديد بالدينار',
+      showCancelButton: true
     });
-    if(!newPriceStr) return;
+    if (!newPriceStr) return;
     const newPrice = Number(newPriceStr);
-    if(!newPrice || newPrice<=0){
-      Swal.fire('تنبيه','يجب إدخال سعر جديد صالح','warning');
+    if (!newPrice || newPrice <= 0) {
+      Swal.fire('تنبيه', 'يجب إدخال سعر جديد صالح', 'warning');
       return;
     }
 
-    const {isConfirmed:hasReturn} = await Swal.fire({
-      title:'هل يوجد راجع؟',
-      icon:'question',
-      showCancelButton:true,
-      confirmButtonText:'نعم',
-      cancelButtonText:'لا'
+    // 2. هل يوجد راجع؟
+    const { isConfirmed: hasReturn } = await Swal.fire({
+      title: 'هل يوجد راجع؟',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'نعم، يوجد راجع',
+      cancelButtonText: 'لا، لا يوجد راجع'
     });
-    if(hasReturn === undefined) return;
+    if (hasReturn === undefined) return;
 
-    const diff = Math.abs(oldAmount - newPrice);
-    baseNote   = `تغيير السعر من ${fmtN(oldAmount)} إلى ${fmtN(newPrice)} ` + (hasReturn ? 'مع وجود راجع' : 'بدون راجع');
-
-    const {value:note} = await Swal.fire({
-      title:'ملاحظة إضافية (اختياري)',
-      input:'text',
-      showCancelButton:true
+    // 3. ملاحظة إضافية (اختياري)
+    const { value: extraNote } = await Swal.fire({
+      title: 'ملاحظة إضافية (اختياري)',
+      input: 'text',
+      showCancelButton: true
     });
-    if(note) extraNote = note;
-    const finalNote = baseNote + (extraNote ? ' — '+extraNote : '');
 
-    if(hasReturn){
-      await updateDoc(ref,{
-        status:'delivered',
-        amount:newPrice,
-        reason:'تغير سعر',
-        managerNote:finalNote,
-        oldAmount:oldAmount,
-        newAmount:newPrice,
-        lastUpdate:serverTimestamp()
-      });
+    const diff = Math.abs(newPrice - oldAmount);
+    const noteText = `🔄 تغيير السعر من ${fmtN(oldAmount)} إلى ${fmtN(newPrice)} دينار ${hasReturn ? 'مع وجود راجع' : 'بدون راجع'}${extraNote ? ' — ' + extraNote : ''}`;
 
-      if(diff>0){
-        await addDoc(collection(db,'orders'),{
+    if (hasReturn) {
+      // حالة وجود راجع: نسختين
+      
+      // النسخة 1: واصل بالسعر الجديد
+      const deliveredOrderData = {
+        ...o,
+        amount: newPrice,
+        status: 'delivered',
+        reason: 'تغير سعر مع راجع',
+        managerNote: noteText,
+        oldAmount: oldAmount,
+        newAmount: newPrice,
+        lastUpdate: serverTimestamp(),
+        createdAt: o.createdAt || serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      delete deliveredOrderData.id;
+      await addDoc(collection(db, 'orders'), deliveredOrderData);
+
+      // النسخة 2: مرفوض بفرق السعر
+      if (diff > 0) {
+        const rejectedOrderData = {
           ...o,
-          amount:diff,
-          status:'rejected',
-          reason:'تغير سعر - فرق السعر',
-          managerNote:finalNote,
-          originalAmount:oldAmount,
-          newAmount:newPrice,
-          parentId:id,
-          createdAt:o.createdAt || serverTimestamp(),
-          lastUpdate:serverTimestamp()
-        });
+          amount: diff,
+          status: 'rejected',
+          reason: 'تغير سعر - فرق السعر',
+          managerNote: noteText,
+          originalAmount: oldAmount,
+          newAmount: newPrice,
+          parentId: id,
+          lastUpdate: serverTimestamp(),
+          createdAt: o.createdAt || serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+        delete rejectedOrderData.id;
+        await addDoc(collection(db, 'orders'), rejectedOrderData);
       }
 
-      await addDoc(collection(db,'notifications'),{
-        to:'managers',
-        roleTarget:'manager',
-        type:'order_update',
-        title:'تغيير سعر مع راجع',
-        message:`الكابتن ${ses.name||ses.user} عدّل الطلب #${wasl||id} إلى سعر جديد مع وجود راجع.`,
-        orderId:id,
-        by:(ses.name||ses.user),
-        at:serverTimestamp(),
-        seen:false
-      });
-    }else{
-      await updateDoc(ref,{
-        status:'delivered',
-        amount:newPrice,
-        reason:'تغير سعر',
-        managerNote:finalNote,
-        oldAmount:oldAmount,
-        newAmount:newPrice,
-        lastUpdate:serverTimestamp()
+      // حذف الطلب الأصلي
+      await deleteDoc(ref);
+
+      await addDoc(collection(db, 'notifications'), {
+        to: 'managers',
+        roleTarget: 'manager',
+        type: 'order_update',
+        title: 'تغيير سعر مع راجع',
+        message: `الكابتن ${ses.name || ses.user} عدّل الطلب #${wasl || id} إلى سعر جديد مع وجود راجع.`,
+        orderId: id,
+        by: (ses.name || ses.user),
+        at: serverTimestamp(),
+        seen: false
       });
 
-      await addDoc(collection(db,'notifications'),{
-        to:'managers',
-        roleTarget:'manager',
-        type:'order_update',
-        title:'تغيير سعر بدون راجع',
-        message:`الكابتن ${ses.name||ses.user} عدّل الطلب #${wasl||id} إلى سعر جديد بدون راجع.`,
-        orderId:id,
-        by:(ses.name||ses.user),
-        at:serverTimestamp(),
-        seen:false
+      Swal.fire('تم', 'تم تغيير السعر مع وجود راجع\n(نسخة واصل + نسخة مرفوض)', 'success');
+    } else {
+      // حالة عدم وجود راجع: نسخة واحدة واصل
+      await updateDoc(ref, {
+        amount: newPrice,
+        status: 'delivered',
+        reason: 'تغير سعر بدون راجع',
+        managerNote: noteText,
+        oldAmount: oldAmount,
+        newAmount: newPrice,
+        lastUpdate: serverTimestamp()
       });
+
+      await addDoc(collection(db, 'notifications'), {
+        to: 'managers',
+        roleTarget: 'manager',
+        type: 'order_update',
+        title: 'تغيير سعر بدون راجع',
+        message: `الكابتن ${ses.name || ses.user} عدّل الطلب #${wasl || id} إلى سعر جديد بدون راجع.`,
+        orderId: id,
+        by: (ses.name || ses.user),
+        at: serverTimestamp(),
+        seen: false
+      });
+
+      Swal.fire('تم', 'تم تغيير السعر بدون راجع\n(نسخة واحدة واصل)', 'success');
     }
-
-    Swal.fire('تم','تم تطبيق تغيير السعر بنجاح','success');
+    
     renderAccounts();
     return;
-  }else{
-    const {value:note} = await Swal.fire({
-      title:'ملاحظة إضافية (اختياري)',
-      input:'text',
-      showCancelButton:true
+  } else {
+    // رفض عادي بدون تغيير سعر
+    const { value: note } = await Swal.fire({
+      title: 'ملاحظة إضافية (اختياري)',
+      input: 'text',
+      showCancelButton: true
     });
     const finalNote = note || '';
 
-    await updateDoc(ref,{
-      status:'rejected',
+    await updateDoc(ref, {
+      status: 'rejected',
       reason,
       managerNote: finalNote || null,
-      lastUpdate:serverTimestamp()
+      lastUpdate: serverTimestamp()
     });
 
-    await addDoc(collection(db,'notifications'),{
-      to:'managers',
-      roleTarget:'manager',
-      type:'order_update',
-      title:'تحديث: رفض',
-      message:`الكابتن ${ses.name||ses.user} حدّث الطلب #${wasl||id} إلى حالة رفض (${reason})`,
-      orderId:id,
-      by:(ses.name||ses.user),
-      at:serverTimestamp(),
-      seen:false
+    await addDoc(collection(db, 'notifications'), {
+      to: 'managers',
+      roleTarget: 'manager',
+      type: 'order_update',
+      title: 'تحديث: رفض',
+      message: `الكابتن ${ses.name || ses.user} حدّث الطلب #${wasl || id} إلى حالة رفض (${reason})`,
+      orderId: id,
+      by: (ses.name || ses.user),
+      at: serverTimestamp(),
+      seen: false
     });
 
-    Swal.fire('تم','تم تحويل الطلب إلى قائمة الرفض','success');
+    Swal.fire('تم', 'تم تحويل الطلب إلى قائمة الرفض', 'success');
   }
 };
 
